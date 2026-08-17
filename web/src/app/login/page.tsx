@@ -1,0 +1,115 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+
+import { ApiError, api } from "@/lib/api";
+import { useAuthStore } from "@/lib/store/auth";
+
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const setSession = useAuthStore((s) => s.setSession);
+
+  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [phone, setPhone] = useState("+91");
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [demoBypassAvailable, setDemoBypassAvailable] = useState(false);
+
+  async function requestOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await api.requestOtp(phone);
+      setDemoBypassAvailable(res.demo_bypass_available);
+      setStep("otp");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not reach the LOCUS API. Is the backend running?");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await api.verifyOtp(phone, token);
+      setSession(res.access_token, res.staff);
+      router.replace(searchParams.get("next") ?? "/printer");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not verify that code.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-ivory px-6">
+      <h1 className="mb-1 font-serif text-4xl text-navy">LOCUS</h1>
+      <p className="mb-10 text-navy/60">Staff sign in</p>
+
+      <form
+        onSubmit={step === "phone" ? requestOtp : verifyOtp}
+        className="w-full max-w-sm rounded-card border border-navy/10 bg-white p-6 shadow-card"
+      >
+        {step === "phone" ? (
+          <>
+            <label className="mb-2 block text-sm font-medium text-navy">Staff phone number</label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+919876543210"
+              className="mb-4 w-full rounded-xl border border-navy/15 px-4 py-3 font-mono text-navy outline-none focus:border-indigo"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-indigo py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? "Sending…" : "Send OTP"}
+            </button>
+          </>
+        ) : (
+          <>
+            <label className="mb-2 block text-sm font-medium text-navy">
+              Enter the code sent to {phone}
+              {demoBypassAvailable ? " (or the demo code)" : ""}
+            </label>
+            <input
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="000000"
+              maxLength={6}
+              className="mb-4 w-full rounded-xl border border-navy/15 px-4 py-3 text-center font-mono text-2xl tracking-widest text-navy outline-none focus:border-indigo"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="mb-3 w-full rounded-xl bg-indigo py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? "Verifying…" : "Verify & Log In"}
+            </button>
+            <button type="button" onClick={() => setStep("phone")} className="w-full text-center text-sm text-navy/50">
+              Change number
+            </button>
+          </>
+        )}
+
+        {error ? <p className="mt-4 text-center text-sm text-brick">{error}</p> : null}
+      </form>
+    </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}

@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-ivory text-navy antialiased;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
