@@ -5,6 +5,7 @@ npm-debug.log*
 # Next.js
 web/.next/
 web/out/
+*.tsbuildinfo
 
 # Expo
 mobile/.expo/

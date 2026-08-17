@@ -5,6 +5,7 @@ import { useEffect } from "react";
 
 import { DashboardChrome } from "@/components/dashboard/DashboardChrome";
 import { DashboardProvider } from "@/lib/dashboardContext";
+import { destinationForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/lib/store/auth";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -16,9 +17,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (hasHydrated && !accessToken) {
-      router.replace("/login?next=/dashboard");
+      router.replace("/login");
     } else if (hasHydrated && staff && staff.role !== "SUPER_ADMIN" && staff.role !== "HUB_MANAGER") {
-      router.replace("/printer");
+      router.replace(destinationForRole(staff.role));
     }
   }, [hasHydrated, accessToken, staff, router]);
 
