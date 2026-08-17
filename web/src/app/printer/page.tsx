@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 
 import { ApiError, api } from "@/lib/api";
+import { destinationForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/lib/store/auth";
 
 type PrinterType = "PARCEL" | "BAG";
@@ -13,6 +14,8 @@ interface PrintedItem {
   id: string;
   shortcode: string;
 }
+
+const PRINTER_ROLES = ["WAREHOUSE_STAFF", "HUB_MANAGER", "SUPER_ADMIN"];
 
 export default function PrinterPage() {
   const router = useRouter();
@@ -28,10 +31,13 @@ export default function PrinterPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (hasHydrated && !accessToken) {
-      router.replace("/login?next=/printer");
+    if (!hasHydrated) return;
+    if (!accessToken || !staff) {
+      router.replace("/login");
+    } else if (!PRINTER_ROLES.includes(staff.role)) {
+      router.replace(destinationForRole(staff.role));
     }
-  }, [hasHydrated, accessToken, router]);
+  }, [hasHydrated, accessToken, staff, router]);
 
   async function handleGenerate() {
     if (!accessToken) return;

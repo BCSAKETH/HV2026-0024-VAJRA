@@ -1,14 +1,14 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { ApiError, api } from "@/lib/api";
+import { destinationForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/lib/store/auth";
 
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -40,7 +40,9 @@ function LoginForm() {
     try {
       const res = await api.verifyOtp(phone, token);
       setSession(res.access_token, res.staff);
-      router.replace(searchParams.get("next") ?? "/printer");
+      // The backend-verified role decides the destination — never a query
+      // param, never a button the user clicked before logging in.
+      router.replace(destinationForRole(res.staff.role));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not verify that code.");
     } finally {
@@ -107,9 +109,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 }
