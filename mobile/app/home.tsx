@@ -1,31 +1,29 @@
-import { Redirect, useRouter } from "expo-router";
+import { Redirect } from "expo-router";
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Header } from "../components/Header";
+import { ProfileModal } from "../components/ProfileModal";
 import { useAuthStore } from "../lib/store/auth";
-
-// Every floor role has a real screen — mirrors the web app's
-// destinationForRole() in lib/roleRouting.ts exactly. QR_PASTER is the one
-// floor role that actually lives on the web app (Digital Printer), so it
-// has no mobile screen and falls through to the placeholder below.
+import { useThemeStore } from "../lib/store/theme";
 
 const ROLE_LABEL: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
   HUB_MANAGER: "Hub Manager",
-  QR_PASTER: "QR Paster",
+  QR_PASTER: "QR Paster (Digital Printer)",
   BILL_SCANNER: "Bill Scanner",
   CONSOLIDATOR: "Consolidator",
   LINE_HAUL: "Line-Haul Driver",
   LAST_MILE: "Last-Mile Agent",
 };
 
-// Placeholder landing screen for any role without a dedicated mobile
-// screen (SUPER_ADMIN, HUB_MANAGER, QR_PASTER all live on the web app).
-// Role-based routing below is decided purely from `staff.role`, never
-// chosen manually by the person logging in.
 export default function Home() {
-  const router = useRouter();
   const staff = useAuthStore((s) => s.staff);
-  const logout = useAuthStore((s) => s.logout);
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
+
+  const [profileOpen, setProfileOpen] = useState(false);
 
   if (!staff) {
     return <Redirect href="/login" />;
@@ -48,23 +46,45 @@ export default function Home() {
   }
 
   return (
-    <View className="flex-1 justify-center bg-ivory px-6">
-      <View className="rounded-2xl border border-navy/10 bg-white p-6" style={{ borderRadius: 16 }}>
-        <Text className="text-xs uppercase tracking-widest text-orange">Logged in</Text>
-        <Text className="mt-1 text-2xl text-navy">{staff.name ?? staff.phone}</Text>
-        <Text className="mt-1 text-navy/60">{ROLE_LABEL[staff.role] ?? staff.role}</Text>
-        <Text className="mt-4 text-sage">Role-specific screens land in Phase 5.</Text>
+    <SafeAreaView className={`flex-1 ${isDark ? "bg-navy" : "bg-ivory"}`}>
+      <Header onOpenProfile={() => setProfileOpen(true)} />
+      <ProfileModal visible={profileOpen} onClose={() => setProfileOpen(false)} />
 
-        <Pressable
-          onPress={() => {
-            logout();
-            router.replace("/login");
-          }}
-          className="mt-6 items-center rounded-xl border border-brick py-3"
-        >
-          <Text className="font-semibold text-brick">Log out</Text>
-        </Pressable>
+      <View className="flex-1 justify-center px-6">
+        <View className={`rounded-3xl p-6 border ${isDark ? "bg-white/5 border-white/10" : "bg-white border-navy/10 shadow-lg"}`}>
+          <View className="mb-2 self-start rounded-full bg-orange/20 px-3 py-1 border border-orange/40">
+            <Text className="text-xs font-bold text-orange">Web Portal Role</Text>
+          </View>
+
+          <Text className={`font-serif text-2xl font-bold ${isDark ? "text-white" : "text-navy"}`}>
+            Welcome, {staff.name ?? staff.phone}
+          </Text>
+          <Text className={`mt-1 text-sm font-semibold ${isDark ? "text-white/70" : "text-navy/70"}`}>
+            Role: {ROLE_LABEL[staff.role] ?? staff.role}
+          </Text>
+
+          <View className="my-6 rounded-2xl bg-indigo/10 p-4 border border-indigo/20">
+            <Text className="text-sm font-bold text-indigo mb-1">
+              🖥️ Manage via Web Dashboard
+            </Text>
+            <Text className={`text-xs leading-relaxed ${isDark ? "text-white/80" : "text-navy/80"}`}>
+              {staff.role === "QR_PASTER"
+                ? "The QR Paster / Digital Printer interface runs directly on desktop hardware via web."
+                : "Management analytics, hub monitoring, worker provisioning, and live bottleneck alerts run on the LOCUS Web Portal."}
+            </Text>
+            <Text className="mt-3 font-mono text-xs font-bold text-indigo">
+              https://locus-ecru.vercel.app
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => setProfileOpen(true)}
+            className="items-center rounded-xl bg-indigo py-3.5"
+          >
+            <Text className="font-semibold text-white">View Staff Profile & Settings</Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

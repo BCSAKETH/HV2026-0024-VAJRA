@@ -130,6 +130,23 @@ function toFormData(uris: { uri: string; name: string; type: string }[], field =
   return form;
 }
 
+export interface StaffActivity {
+  stats: {
+    today_count: number;
+    total_count: number;
+    error_points: number;
+  };
+  events: {
+    id: string;
+    tracking_id: string;
+    event_type: string;
+    created_at: string;
+    staff_id?: string;
+    lat?: number | null;
+    lng?: number | null;
+  }[];
+}
+
 export const api = {
   requestOtp: (phone: string) =>
     request<{ message: string; demo_bypass_available: boolean }>("/auth/request-otp", {
@@ -144,6 +161,9 @@ export const api = {
     }),
 
   me: () => request<StaffProfile>("/auth/me"),
+
+  getMyActivity: () => request<StaffActivity>("/auth/me/activity"),
+
 
   resolve: (code: string) => {
     const upper = code.trim().toUpperCase();
