@@ -13,12 +13,13 @@ import { Image, Pressable, Text, View } from "react-native";
 // the longest edge at 1600px is what actually bounds the file size; a
 // bill/parcel photo doesn't need more resolution than that to stay fully
 // legible for OCR or condition-proof review.
-const MAX_DIMENSION = 1600;
+const MAX_DIMENSION = 1200;
 
 export interface CapturedPhoto {
   uri: string;
   name: string;
   type: string;
+  base64?: string;
 }
 
 interface Props {
@@ -37,9 +38,9 @@ export function PhotoCapture({ onCaptured, hint }: Props) {
   async function handleCapture() {
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
-    let photo: { uri: string; width?: number; height?: number } | undefined;
+    let photo: { uri: string; width?: number; height?: number; base64?: string } | undefined;
     try {
-      photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: true });
       if (!photo) return;
 
       // Resize (not just compress) before it ever gets near the network --
@@ -48,16 +49,17 @@ export function PhotoCapture({ onCaptured, hint }: Props) {
       const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0);
       context.resize(isLandscape ? { width: MAX_DIMENSION, height: null } : { width: null, height: MAX_DIMENSION });
       const rendered = await context.renderAsync();
-      const resized = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+      const resized = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.4, base64: true });
 
-      setPreview({ uri: resized.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
+      setPreview({ uri: resized.uri, base64: resized.base64 ?? photo.base64, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
     } catch {
       // If resizing itself fails for any reason, fall back to the original
       // capture already in hand rather than losing the photo or firing the
       // shutter a second time -- still functional, just without the size
       // guarantee that resize would have added.
-      if (photo) setPreview({ uri: photo.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
+      if (photo) setPreview({ uri: photo.uri, base64: photo.base64, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
     } finally {
+
       setCapturing(false);
     }
   }

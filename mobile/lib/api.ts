@@ -119,7 +119,13 @@ const REQUEST_TIMEOUT_MS = 45_000;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) };
-  if (!(init?.body instanceof FormData)) headers["Content-Type"] = "application/json";
+  const isFormData = init?.body && typeof init.body === "object" && "append" in init.body;
+  if (isFormData) {
+    delete headers["Content-Type"];
+  } else if (!headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const token = useAuthStore.getState().accessToken;
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -192,8 +198,16 @@ export const api = {
     return request<{ type: "PARCEL" | "BAG"; id: string }>(`/resolve/${encodeURIComponent(upper)}`);
   },
 
-  ocrBill: (photo: { uri: string; name: string; type: string }) =>
-    request<OcrResult>("/ocr/bill", { method: "POST", body: toFormData([photo], "file") }),
+  ocrBill: (photo: { uri: string; name: string; type: string; base64?: string }) => {
+    if (photo.base64) {
+      return request<OcrResult>("/ocr/bill-base64", {
+        method: "POST",
+        body: JSON.stringify({ image_base64: photo.base64, mime_type: photo.type || "image/jpeg" }),
+      });
+    }
+    return request<OcrResult>("/ocr/bill", { method: "POST", body: toFormData([photo], "file") });
+  },
+
 
   msmeByPhone: (phone: string) => request<{ id: string; business_name: string; owner_name: string | null; phone: string; pincode: string | null }>(`/msmes/by-phone/${encodeURIComponent(phone)}`),
 
