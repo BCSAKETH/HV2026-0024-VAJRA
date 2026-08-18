@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { SecurityInbox } from "@/components/dashboard/SecurityInbox";
 import { type ActiveTransit, type Bottleneck, type SecurityEvent, type StaffLookup, api } from "@/lib/api";
 import { useDashboard } from "@/lib/dashboardContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { type RawTrackingEvent, supabaseRealtime } from "@/lib/supabaseClient";
 import { useAuthStore } from "@/lib/store/auth";
 
@@ -16,6 +17,7 @@ const POLL_INTERVAL_MS = 20_000;
 export default function OverviewPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const { hubs, previewHubId } = useDashboard();
+  const { t } = useTranslation();
 
   const [transits, setTransits] = useState<ActiveTransit[]>([]);
   const [bottlenecks, setBottlenecks] = useState<Bottleneck[]>([]);
@@ -81,9 +83,7 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="h-[520px] overflow-hidden rounded-card border border-navy/10 bg-white shadow-card lg:col-span-2">
           {!supabaseRealtime ? (
-            <div className="flex h-full items-center justify-center px-8 text-center text-navy/40">
-              Set NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY to enable the live map.
-            </div>
+            <div className="flex h-full items-center justify-center px-8 text-center text-navy/40">{t.overview.mapEnvHint}</div>
           ) : (
             <LiveMap hubs={hubs} transits={transits} bottlenecks={bottlenecks} compromisedBagIds={compromisedBagIds} />
           )}

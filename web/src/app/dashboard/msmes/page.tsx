@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { type MsmeDetail, type MsmeSummary, api } from "@/lib/api";
 import { useDashboard } from "@/lib/dashboardContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuthStore } from "@/lib/store/auth";
 
 // Warm/logistics palette banner colors, picked deterministically per MSME
@@ -39,6 +40,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 function MsmeCard({ msme, onOpen }: { msme: MsmeSummary; onOpen: () => void }) {
+  const { t } = useTranslation();
   return (
     <button onClick={onOpen} className="group flex flex-col overflow-hidden rounded-card border border-navy/10 bg-white text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-lg">
       <div className="flex h-24 items-center justify-center" style={{ backgroundColor: bannerColorFor(msme.id) }}>
@@ -47,21 +49,24 @@ function MsmeCard({ msme, onOpen }: { msme: MsmeSummary; onOpen: () => void }) {
       <div className="flex flex-1 flex-col p-4">
         <p className="font-serif text-lg leading-tight text-navy">{msme.business_name}</p>
         <p className="mt-1 text-sm text-navy/50">
-          {msme.owner_name ?? "Owner unknown"} {msme.pincode ? `· ${msme.pincode}` : ""}
+          {msme.owner_name ?? t.msmes.ownerUnknown} {msme.pincode ? `· ${msme.pincode}` : ""}
         </p>
         <div className="mt-3 flex items-center justify-between">
           <span className="rounded-full bg-indigo/10 px-2.5 py-1 text-xs font-semibold text-indigo">
-            {msme.shipment_count} shipment{msme.shipment_count === 1 ? "" : "s"}
+            {msme.shipment_count} {t.msmes.shipmentWord}
           </span>
         </div>
-        <p className="mt-3 text-xs text-navy/40">{msme.first_shipped_at ? `First shipped ${formatDate(msme.first_shipped_at)}` : "No shipments yet"}</p>
-        <span className="mt-3 text-sm font-semibold text-indigo group-hover:underline">View Details →</span>
+        <p className="mt-3 text-xs text-navy/40">
+          {msme.first_shipped_at ? `${t.msmes.firstShipped} ${formatDate(msme.first_shipped_at)}` : t.msmes.noShipmentsYet}
+        </p>
+        <span className="mt-3 text-sm font-semibold text-indigo group-hover:underline">{t.msmes.viewDetails} →</span>
       </div>
     </button>
   );
 }
 
 function MsmeDetailView({ msmeId, accessToken, previewHubId, onBack }: { msmeId: string; accessToken: string; previewHubId: string | null; onBack: () => void }) {
+  const { t } = useTranslation();
   const [detail, setDetail] = useState<MsmeDetail | null>(null);
 
   useEffect(() => {
@@ -71,11 +76,11 @@ function MsmeDetailView({ msmeId, accessToken, previewHubId, onBack }: { msmeId:
   return (
     <div>
       <button onClick={onBack} className="mb-4 text-sm font-semibold text-indigo hover:underline">
-        ← Back to all MSMEs
+        ← {t.msmes.backToAll}
       </button>
 
       {!detail ? (
-        <p className="text-navy/40">Loading…</p>
+        <p className="text-navy/40">{t.msmes.loading}</p>
       ) : (
         <>
           <div className="mb-6 flex items-center gap-4 rounded-card border border-navy/10 bg-white p-6 shadow-card">
@@ -85,35 +90,37 @@ function MsmeDetailView({ msmeId, accessToken, previewHubId, onBack }: { msmeId:
             <div>
               <p className="font-serif text-2xl text-navy">{detail.business_name}</p>
               <p className="text-sm text-navy/50">
-                {detail.owner_name ?? "Owner unknown"} · <span className="font-mono">{detail.phone}</span> {detail.pincode ? `· ${detail.pincode}` : ""}
+                {detail.owner_name ?? t.msmes.ownerUnknown} · <span className="font-mono">{detail.phone}</span> {detail.pincode ? `· ${detail.pincode}` : ""}
               </p>
-              <p className="mt-1 text-xs text-navy/40">On file since {formatDate(detail.created_at)}</p>
+              <p className="mt-1 text-xs text-navy/40">
+                {t.msmes.onFileSince} {formatDate(detail.created_at)}
+              </p>
             </div>
           </div>
 
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="rounded-xl border border-navy/10 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-navy/50">Total shipments</p>
+              <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.totalShipments}</p>
               <p className="mt-1 font-serif text-2xl text-navy">{detail.total_shipments}</p>
             </div>
             <div className="rounded-xl border border-navy/10 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-navy/50">Total value</p>
+              <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.totalValue}</p>
               <p className="mt-1 font-serif text-2xl text-navy">{formatMoney(detail.total_value)}</p>
             </div>
             <div className="rounded-xl border border-navy/10 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-navy/50">Delivered</p>
+              <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.delivered}</p>
               <p className="mt-1 font-serif text-2xl text-sage">{detail.delivered_count}</p>
             </div>
             <div className="rounded-xl border border-navy/10 bg-white p-4">
-              <p className="text-xs uppercase tracking-wide text-navy/50">RTO</p>
+              <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.rto}</p>
               <p className="mt-1 font-serif text-2xl text-brick">{detail.rto_count}</p>
             </div>
           </div>
 
           <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-            <p className="mb-4 font-serif text-xl text-navy">Shipment history</p>
+            <p className="mb-4 font-serif text-xl text-navy">{t.msmes.shipmentHistory}</p>
             {detail.shipments.length === 0 ? (
-              <p className="text-navy/40">No shipments yet.</p>
+              <p className="text-navy/40">{t.msmes.noShipmentsYet}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {detail.shipments.map((s) => (
@@ -140,6 +147,7 @@ function MsmeDetailView({ msmeId, accessToken, previewHubId, onBack }: { msmeId:
 export default function MsmesPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const { previewHubId } = useDashboard();
+  const { t } = useTranslation();
   const [msmes, setMsmes] = useState<MsmeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -161,11 +169,11 @@ export default function MsmesPage() {
         <MsmeDetailView msmeId={selectedId} accessToken={accessToken} previewHubId={previewHubId} onBack={() => setSelectedId(null)} />
       ) : (
         <>
-          <p className="mb-1 font-serif text-2xl text-navy">MSMEs</p>
-          <p className="mb-6 text-sm text-navy/50">{loading ? "Loading…" : `${msmes.length} business${msmes.length === 1 ? "" : "es"} on file`}</p>
+          <p className="mb-1 font-serif text-2xl text-navy">{t.msmes.title}</p>
+          <p className="mb-6 text-sm text-navy/50">{loading ? t.msmes.loading : `${msmes.length} ${t.msmes.businessesOnFile}`}</p>
 
           {!loading && msmes.length === 0 ? (
-            <p className="text-navy/40">No MSME has shipped through this scope yet.</p>
+            <p className="text-navy/40">{t.msmes.noMsmes}</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {msmes.map((m) => (

@@ -1,14 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { type Locale, LOCALE_LABEL } from "@/lib/store/locale";
 import { useAuthStore } from "@/lib/store/auth";
 
-const ROLE_LABEL: Record<string, string> = {
-  LINE_HAUL: "Line-Haul Driver",
-  LAST_MILE: "Last-Mile Agent",
-};
+const LOCALES: Locale[] = ["en", "te", "hi"];
 
 // Where LINE_HAUL / LAST_MILE staff land if they log into the web app —
 // their actual work happens entirely in the LOCUS mobile app, which is a
@@ -21,6 +21,7 @@ export default function AccountPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const staff = useAuthStore((s) => s.staff);
   const logout = useAuthStore((s) => s.logout);
+  const { t, locale, setLocale } = useTranslation();
 
   useEffect(() => {
     if (hasHydrated && !accessToken) router.replace("/login");
@@ -29,21 +30,33 @@ export default function AccountPage() {
   if (!hasHydrated || !accessToken || !staff) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-ivory">
-        <p className="font-mono text-sm text-navy/50">Checking session…</p>
+        <p className="font-mono text-sm text-navy/50">{t.account.checkingSession}</p>
       </main>
     );
   }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-ivory px-6">
+      <div className="mb-4 flex gap-1.5">
+        {LOCALES.map((l) => (
+          <button
+            key={l}
+            onClick={() => setLocale(l)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              locale === l ? "bg-indigo text-white" : "border border-navy/15 text-navy/50 hover:bg-navy/5"
+            }`}
+          >
+            {LOCALE_LABEL[l]}
+          </button>
+        ))}
+      </div>
+
       <div className="w-full max-w-sm rounded-card border border-navy/10 bg-white p-6 text-center shadow-card">
-        <p className="mb-1 font-mono text-xs uppercase tracking-widest text-orange">Logged in</p>
+        <Image src="/logo.png" alt="LOCUS" width={40} height={40} className="mx-auto mb-3 rounded-xl" />
+        <p className="mb-1 font-mono text-xs uppercase tracking-widest text-orange">{t.account.loggedIn}</p>
         <p className="mb-1 text-xl text-navy">{staff.name ?? staff.phone}</p>
-        <p className="mb-4 text-navy/60">{ROLE_LABEL[staff.role] ?? staff.role}</p>
-        <p className="mb-6 text-sm text-navy/50">
-          This role's tools — scanning, manifests, deliveries — live in the LOCUS mobile app, not here. There&apos;s nothing to do on
-          the web for this account.
-        </p>
+        <p className="mb-4 text-navy/60">{t.roles[staff.role]}</p>
+        <p className="mb-6 text-sm text-navy/50">{t.account.webNothingToDo}</p>
         <button
           onClick={() => {
             logout();
@@ -51,7 +64,7 @@ export default function AccountPage() {
           }}
           className="w-full rounded-xl border border-brick py-3 font-semibold text-brick hover:bg-brick/5"
         >
-          Log out
+          {t.common.logOut}
         </button>
       </div>
     </main>

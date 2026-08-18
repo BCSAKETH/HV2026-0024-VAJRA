@@ -5,23 +5,11 @@ import { useEffect, useState } from "react";
 
 import { LocusGridAnimation } from "@/components/track/LocusGridAnimation";
 import { VerificationBadge } from "@/components/track/VerificationBadge";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { ApiError, api, type TrackResult } from "@/lib/api";
+import { type Locale, LOCALE_LABEL } from "@/lib/store/locale";
 
-const EVENT_LABELS: Record<string, string> = {
-  PRE_ALLOCATED: "Label printed",
-  INTAKE: "Picked up",
-  CONSOLIDATED: "Consolidated into transit bag",
-  SEALED: "Bag sealed for dispatch",
-  DEPARTED: "Left origin hub",
-  ARRIVED_AT_HUB: "Arrived at hub",
-  UNSEALED: "Bag opened at delivery hub",
-  CLAIMED: "Claimed by delivery agent",
-  OUT_FOR_DELIVERY: "Out for delivery",
-  DELIVERED: "Delivered",
-  RTO: "Delivery attempt failed — returning",
-  COMPROMISED: "Security exception flagged",
-  AUTO_HEALED: "Routing corrected automatically",
-};
+const LOCALES: Locale[] = ["en", "te", "hi"];
 
 function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -29,6 +17,7 @@ function formatTimestamp(iso: string): string {
 
 export default function TrackPage() {
   const params = useParams<{ trackingId: string }>();
+  const { t, locale, setLocale } = useTranslation();
   const [showAnimation, setShowAnimation] = useState(true);
   const [data, setData] = useState<TrackResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +26,8 @@ export default function TrackPage() {
     api
       .track(params.trackingId)
       .then(setData)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load this shipment."));
+      .catch((e) => setError(e instanceof ApiError ? e.message : t.track.couldNotLoad));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.trackingId]);
 
   return (
@@ -46,7 +36,22 @@ export default function TrackPage() {
 
       {!showAnimation ? (
         <div className="mx-auto max-w-2xl px-6 py-16">
-          <p className="mb-1 font-mono text-xs uppercase tracking-[0.3em] text-orange">LOCUS · The Exact Point of Truth</p>
+          <div className="mb-6 flex items-center justify-between">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-orange">{t.track.tagline}</p>
+            <div className="flex gap-1">
+              {LOCALES.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    locale === l ? "bg-indigo text-white" : "border border-navy/15 text-navy/50 hover:bg-navy/5"
+                  }`}
+                >
+                  {LOCALE_LABEL[l]}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {error ? (
             <div className="rounded-card border border-brick/30 bg-brick/5 p-6">
@@ -61,7 +66,7 @@ export default function TrackPage() {
             <>
               <h1 className="mb-2 font-serif text-4xl text-navy">{data.tracking_id}</h1>
               <p className="mb-1 text-navy/70">
-                {data.recipient_name ? `To ${data.recipient_name}` : "Recipient not disclosed"}
+                {data.recipient_name ? `${t.track.to} ${data.recipient_name}` : t.track.recipientNotDisclosed}
                 {data.delivery_pincode ? ` · ${data.delivery_pincode}` : ""}
               </p>
               <p className="mb-6 font-mono text-sm uppercase tracking-wide text-indigo">{data.status.replace(/_/g, " ")}</p>
@@ -71,12 +76,12 @@ export default function TrackPage() {
               </div>
 
               <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-                <p className="mb-4 font-serif text-xl text-navy">Journey Timeline</p>
+                <p className="mb-4 font-serif text-xl text-navy">{t.track.journeyTimeline}</p>
                 <ol className="relative border-l-2 border-navy/10 pl-6">
                   {data.timeline.map((event, i) => (
                     <li key={i} className="mb-6 last:mb-0">
                       <span className="absolute -left-[9px] mt-1.5 h-4 w-4 rounded-full border-2 border-white bg-indigo" />
-                      <p className="font-semibold text-navy">{EVENT_LABELS[event.event_type] ?? event.event_type}</p>
+                      <p className="font-semibold text-navy">{t.track.eventLabels[event.event_type as keyof typeof t.track.eventLabels] ?? event.event_type}</p>
                       <p className="font-mono text-xs text-navy/50">{formatTimestamp(event.created_at)}</p>
                     </li>
                   ))}
@@ -85,7 +90,7 @@ export default function TrackPage() {
 
               {data.condition_photo_urls.length > 0 ? (
                 <div className="mt-6 rounded-card border border-navy/10 bg-white p-6 shadow-card">
-                  <p className="mb-4 font-serif text-xl text-navy">Proof of Condition at Pickup</p>
+                  <p className="mb-4 font-serif text-xl text-navy">{t.track.proofOfCondition}</p>
                   <div className="flex gap-3">
                     {data.condition_photo_urls.map((url) => (
                       // eslint-disable-next-line @next/next/no-img-element

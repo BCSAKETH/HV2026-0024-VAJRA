@@ -1,9 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 
+import { ProfileMenu } from "@/components/ProfileMenu";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { ApiError, api } from "@/lib/api";
 import { destinationForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/lib/store/auth";
@@ -22,7 +25,7 @@ export default function PrinterPage() {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const staff = useAuthStore((s) => s.staff);
-  const logout = useAuthStore((s) => s.logout);
+  const { t } = useTranslation();
 
   const [type, setType] = useState<PrinterType>("PARCEL");
   const [current, setCurrent] = useState<PrintedItem | null>(null);
@@ -47,7 +50,7 @@ export default function PrinterPage() {
       const res = await api.generateQr(accessToken, nextType);
       setCurrent(res.item);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not generate a QR code.");
+      setError(err instanceof ApiError ? err.message : t.printer.couldNotGenerate);
     } finally {
       setLoading(false);
     }
@@ -56,7 +59,7 @@ export default function PrinterPage() {
   if (!hasHydrated || !accessToken) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-ivory">
-        <p className="font-mono text-sm text-navy/50">Checking session…</p>
+        <p className="font-mono text-sm text-navy/50">{t.printer.checkingSession}</p>
       </main>
     );
   }
@@ -64,21 +67,16 @@ export default function PrinterPage() {
   return (
     <main className="min-h-screen bg-ivory">
       <header className="no-print flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
-        <div>
-          <p className="font-serif text-2xl text-navy">Digital Printer</p>
-          <p className="font-mono text-xs text-navy/50">
-            {staff?.name ?? staff?.phone} · {staff?.role}
-          </p>
+        <div className="flex items-center gap-3">
+          <Image src="/logo.png" alt="LOCUS" width={32} height={32} className="rounded-lg" />
+          <div>
+            <p className="font-serif text-2xl text-navy">{t.printer.title}</p>
+            <p className="font-mono text-xs text-navy/50">
+              {staff?.name ?? staff?.phone} · {staff ? t.roles[staff.role] : ""}
+            </p>
+          </div>
         </div>
-        <button
-          onClick={() => {
-            logout();
-            router.replace("/login");
-          }}
-          className="rounded-lg border border-brick px-4 py-2 text-sm font-medium text-brick hover:bg-brick/5"
-        >
-          Log out
-        </button>
+        <ProfileMenu />
       </header>
 
       <section className="no-print mx-auto max-w-md px-8 py-8">
@@ -88,14 +86,14 @@ export default function PrinterPage() {
             disabled={loading}
             className="flex-1 rounded-xl bg-orange py-3.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {loading && type === "PARCEL" ? "Generating…" : "Generate Tracking ID"}
+            {loading && type === "PARCEL" ? t.printer.generating : t.printer.generateTrackingId}
           </button>
           <button
             onClick={() => handleGenerate("BAG")}
             disabled={loading}
             className="flex-1 rounded-xl bg-indigo py-3.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {loading && type === "BAG" ? "Generating…" : "Generate Bag ID"}
+            {loading && type === "BAG" ? t.printer.generating : t.printer.generateBagId}
           </button>
         </div>
 
@@ -107,14 +105,11 @@ export default function PrinterPage() {
             <p className="mt-4 font-mono text-sm text-navy/50">{current.id}</p>
             <p className="mt-1 font-mono text-3xl font-semibold tracking-widest text-navy">{current.shortcode}</p>
             <p className="mt-4 text-center text-sm text-navy/40">
-              Paste this on the {type === "PARCEL" ? "parcel" : "bag"} now. No thermal printer? Screenshot this
-              screen instead — the QR and shortcode both work from a photo.
+              {t.printer.pasteHintPrefix} {type === "PARCEL" ? t.printer.parcel : t.printer.bag} {t.printer.pasteHintSuffix}
             </p>
           </div>
         ) : (
-          <div className="rounded-card border border-dashed border-navy/20 bg-white/50 p-10 text-center text-navy/40">
-            Generate a code above — one at a time, right before you paste it.
-          </div>
+          <div className="rounded-card border border-dashed border-navy/20 bg-white/50 p-10 text-center text-navy/40">{t.printer.generatePrompt}</div>
         )}
       </section>
     </main>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { ApiError, type PincodeRoute, api } from "@/lib/api";
 import { useDashboard } from "@/lib/dashboardContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuthStore } from "@/lib/store/auth";
 
 export default function NetworkPage() {
@@ -11,6 +12,7 @@ export default function NetworkPage() {
   const currentStaff = useAuthStore((s) => s.staff);
   const isSuperAdmin = currentStaff?.role === "SUPER_ADMIN";
   const { hubs, refreshHubs, previewHubId } = useDashboard();
+  const { t } = useTranslation();
 
   const [routes, setRoutes] = useState<PincodeRoute[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export default function NetworkPage() {
       setHubLng("");
       refreshHubs();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add this hub.");
+      setError(err instanceof ApiError ? err.message : t.network.couldNotAddHub);
     } finally {
       setCreatingHub(false);
     }
@@ -56,12 +58,12 @@ export default function NetworkPage() {
 
   async function handleDeleteHub(id: string) {
     if (!accessToken) return;
-    if (!confirm("Delete this hub? This is blocked if any pincode routes still point to it.")) return;
+    if (!confirm(t.network.deleteHubConfirm)) return;
     try {
       await api.deleteHub(accessToken, id);
       refreshHubs();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not delete this hub.");
+      setError(err instanceof ApiError ? err.message : t.network.couldNotDeleteHub);
     }
   }
 
@@ -75,7 +77,7 @@ export default function NetworkPage() {
       setPincode("");
       loadRoutes();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add this route.");
+      setError(err instanceof ApiError ? err.message : t.network.couldNotAddRoute);
     } finally {
       setCreatingRoute(false);
     }
@@ -87,7 +89,7 @@ export default function NetworkPage() {
       await api.deletePincodeRoute(accessToken, code);
       loadRoutes();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not remove this route.");
+      setError(err instanceof ApiError ? err.message : t.network.couldNotRemoveRoute);
     }
   }
 
@@ -98,7 +100,9 @@ export default function NetworkPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Hubs — Super Admin only manages; everyone can see the list */}
         <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-          <p className="mb-4 font-serif text-xl text-navy">Hubs ({hubs.length})</p>
+          <p className="mb-4 font-serif text-xl text-navy">
+            {t.network.hubs} ({hubs.length})
+          </p>
           <div className="mb-5 flex flex-col gap-2">
             {hubs.map((h) => (
               <div key={h.id} className="flex items-center justify-between rounded-xl border border-navy/10 px-4 py-3">
@@ -110,38 +114,40 @@ export default function NetworkPage() {
                 </div>
                 {isSuperAdmin ? (
                   <button onClick={() => handleDeleteHub(h.id)} className="rounded-lg border border-brick px-3 py-1.5 text-xs font-semibold text-brick hover:bg-brick/5">
-                    Remove
+                    {t.common.remove}
                   </button>
                 ) : null}
               </div>
             ))}
-            {hubs.length === 0 ? <p className="text-navy/40">No hubs yet.</p> : null}
+            {hubs.length === 0 ? <p className="text-navy/40">{t.network.noHubsYet}</p> : null}
           </div>
 
           {isSuperAdmin ? (
             <form onSubmit={handleCreateHub} className="border-t border-navy/10 pt-4">
-              <p className="mb-3 text-sm font-semibold text-navy">Add Hub</p>
-              <input value={hubName} onChange={(e) => setHubName(e.target.value)} placeholder="Hub name" className="mb-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy" required />
+              <p className="mb-3 text-sm font-semibold text-navy">{t.network.addHub}</p>
+              <input value={hubName} onChange={(e) => setHubName(e.target.value)} placeholder={t.network.hubName} className="mb-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy" required />
               <select value={hubType} onChange={(e) => setHubType(e.target.value as "SORTING_CENTER" | "WAREHOUSE")} className="mb-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy">
-                <option value="WAREHOUSE">Warehouse</option>
-                <option value="SORTING_CENTER">Sorting Center</option>
+                <option value="WAREHOUSE">{t.network.warehouse}</option>
+                <option value="SORTING_CENTER">{t.network.sortingCenter}</option>
               </select>
               <div className="mb-3 flex gap-2">
-                <input value={hubLat} onChange={(e) => setHubLat(e.target.value)} placeholder="Latitude" className="w-1/2 rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy" required />
-                <input value={hubLng} onChange={(e) => setHubLng(e.target.value)} placeholder="Longitude" className="w-1/2 rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy" required />
+                <input value={hubLat} onChange={(e) => setHubLat(e.target.value)} placeholder={t.network.latitude} className="w-1/2 rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy" required />
+                <input value={hubLng} onChange={(e) => setHubLng(e.target.value)} placeholder={t.network.longitude} className="w-1/2 rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy" required />
               </div>
               <button type="submit" disabled={creatingHub} className="w-full rounded-lg bg-indigo py-2.5 font-semibold text-white hover:opacity-90 disabled:opacity-50">
-                {creatingHub ? "Adding…" : "Add Hub"}
+                {creatingHub ? t.common.adding : t.network.addHub}
               </button>
             </form>
           ) : (
-            <p className="border-t border-navy/10 pt-4 text-sm text-navy/40">Only Super Admin can add or remove hubs.</p>
+            <p className="border-t border-navy/10 pt-4 text-sm text-navy/40">{t.network.onlySuperAdminHubs}</p>
           )}
         </div>
 
         {/* Pincode routes — Hub Manager scoped to their own hub, Super Admin sees/edits any */}
         <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-          <p className="mb-4 font-serif text-xl text-navy">Pincode Routes ({routes.length})</p>
+          <p className="mb-4 font-serif text-xl text-navy">
+            {t.network.pincodeRoutes} ({routes.length})
+          </p>
           <div className="mb-5 flex max-h-80 flex-col gap-2 overflow-y-auto">
             {routes.map((r) => (
               <div key={r.pincode} className="flex items-center justify-between rounded-xl border border-navy/10 px-4 py-2.5">
@@ -149,19 +155,19 @@ export default function NetworkPage() {
                   {r.pincode} <span className="text-navy/40">→</span> {hubNameById(r.destination_hub_id)}
                 </p>
                 <button onClick={() => handleDeleteRoute(r.pincode)} className="rounded-lg border border-brick px-3 py-1 text-xs font-semibold text-brick hover:bg-brick/5">
-                  Remove
+                  {t.common.remove}
                 </button>
               </div>
             ))}
-            {routes.length === 0 ? <p className="text-navy/40">No pincode routes yet.</p> : null}
+            {routes.length === 0 ? <p className="text-navy/40">{t.network.noRoutesYet}</p> : null}
           </div>
 
           <form onSubmit={handleCreateRoute} className="border-t border-navy/10 pt-4">
-            <p className="mb-3 text-sm font-semibold text-navy">Add Route</p>
-            <input value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="6-digit pincode" maxLength={6} className="mb-2 w-full rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy" required />
+            <p className="mb-3 text-sm font-semibold text-navy">{t.network.addRoute}</p>
+            <input value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder={t.network.pincodePlaceholder} maxLength={6} className="mb-2 w-full rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy" required />
             {isSuperAdmin ? (
               <select value={routeHubId} onChange={(e) => setRouteHubId(e.target.value)} className="mb-3 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy" required>
-                <option value="">Routes to…</option>
+                <option value="">{t.network.routesTo}</option>
                 {hubs.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.name}
@@ -169,10 +175,10 @@ export default function NetworkPage() {
                 ))}
               </select>
             ) : (
-              <p className="mb-3 text-sm text-navy/50">Automatically routed to your hub.</p>
+              <p className="mb-3 text-sm text-navy/50">{t.network.autoRoutedHint}</p>
             )}
             <button type="submit" disabled={creatingRoute} className="w-full rounded-lg bg-indigo py-2.5 font-semibold text-white hover:opacity-90 disabled:opacity-50">
-              {creatingRoute ? "Adding…" : "Add Route"}
+              {creatingRoute ? t.common.adding : t.network.addRoute}
             </button>
           </form>
         </div>

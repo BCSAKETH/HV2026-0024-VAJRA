@@ -1,9 +1,15 @@
+"use client";
+
+import { useTranslation } from "@/lib/i18n/useTranslation";
+
 export function VerificationBadge({ badge }: { badge: "VERIFIED_GENUINE" | "CLONE_ATTACK_DETECTED" }) {
+  const { t } = useTranslation();
+
   if (badge === "CLONE_ATTACK_DETECTED") {
     return (
       <div className="flex items-center gap-2 rounded-full border border-brick bg-brick/10 px-4 py-2">
         <span className="h-2 w-2 rounded-full bg-brick" />
-        <span className="font-semibold text-brick">Clone Attack Detected</span>
+        <span className="font-semibold text-brick">{t.track.cloneAttackDetected}</span>
       </div>
     );
   }
@@ -11,7 +17,7 @@ export function VerificationBadge({ badge }: { badge: "VERIFIED_GENUINE" | "CLON
   return (
     <div className="flex items-center gap-2 rounded-full border border-sage bg-sage/10 px-4 py-2" style={{ boxShadow: "0 0 16px 2px #6B8F7133" }}>
       <span className="h-2 w-2 rounded-full bg-sage" />
-      <span className="font-semibold text-sage">Verified Genuine</span>
+      <span className="font-semibold text-sage">{t.track.verifiedGenuine}</span>
     </div>
   );
 }

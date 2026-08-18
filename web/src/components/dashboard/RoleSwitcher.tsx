@@ -1,4 +1,7 @@
+"use client";
+
 import type { Hub } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Props {
   hubs: Hub[];
@@ -11,16 +14,18 @@ interface Props {
 // the same `preview_hub_id` scoping the backend enforces (a real Hub
 // Manager can't reach this component or escalate scope, see dashboard/page.tsx).
 export function RoleSwitcher({ hubs, previewHubId, onChange }: Props) {
+  const { t } = useTranslation();
+
   return (
     <div className="mb-6 flex items-center gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card">
-      <span className="text-sm font-medium text-navy/60">Preview as:</span>
+      <span className="text-sm font-medium text-navy/60">{t.roleSwitcher.previewAs}</span>
       <button
         onClick={() => onChange(null)}
         className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
           previewHubId === null ? "bg-indigo text-white" : "text-navy/60 hover:bg-navy/5"
         }`}
       >
-        Super Admin (Network-wide)
+        {t.roleSwitcher.superAdminNetworkWide}
       </button>
       {hubs.map((hub) => (
         <button
@@ -30,7 +35,7 @@ export function RoleSwitcher({ hubs, previewHubId, onChange }: Props) {
             previewHubId === hub.id ? "bg-indigo text-white" : "text-navy/60 hover:bg-navy/5"
           }`}
         >
-          Hub Manager — {hub.name}
+          {t.roleSwitcher.hubManagerPrefix} {hub.name}
         </button>
       ))}
     </div>

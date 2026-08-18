@@ -1,4 +1,7 @@
+"use client";
+
 import type { KpiOut } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 function KpiCard({ label, value, accent }: { label: string; value: string; accent?: "sage" | "brick" }) {
   const valueColor = accent === "sage" ? "text-sage" : accent === "brick" ? "text-brick" : "text-navy";
@@ -11,6 +14,8 @@ function KpiCard({ label, value, accent }: { label: string; value: string; accen
 }
 
 export function KpiCards({ kpis }: { kpis: KpiOut | null }) {
+  const { t } = useTranslation();
+
   if (!kpis) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -25,9 +30,9 @@ export function KpiCards({ kpis }: { kpis: KpiOut | null }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <KpiCard label="Total Active Orders" value={kpis.total_active_orders.toLocaleString()} />
-      <KpiCard label="Average TAT" value={kpis.average_tat_hours !== null ? `${kpis.average_tat_hours}h` : "—"} />
-      <KpiCard label="Network Integrity Index" value={`${kpis.network_integrity_index}%`} accent={integrityAccent} />
+      <KpiCard label={t.kpi.totalActiveOrders} value={kpis.total_active_orders.toLocaleString()} />
+      <KpiCard label={t.kpi.averageTat} value={kpis.average_tat_hours !== null ? `${kpis.average_tat_hours}h` : "—"} />
+      <KpiCard label={t.kpi.networkIntegrityIndex} value={`${kpis.network_integrity_index}%`} accent={integrityAccent} />
     </div>
   );
 }

@@ -1,15 +1,21 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ApiError, api } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { destinationForRole } from "@/lib/roleRouting";
+import { type Locale, LOCALE_LABEL } from "@/lib/store/locale";
 import { useAuthStore } from "@/lib/store/auth";
+
+const LOCALES: Locale[] = ["en", "te", "hi"];
 
 function LoginForm() {
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
+  const { t, locale, setLocale } = useTranslation();
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [localNumber, setLocalNumber] = useState(""); // bare 10 digits — "+91" is a fixed prefix, never typed
@@ -29,7 +35,7 @@ function LoginForm() {
       setDemoBypassAvailable(res.demo_bypass_available);
       setStep("otp");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not reach the LOCUS API. Is the backend running?");
+      setError(err instanceof ApiError ? err.message : t.login.errorRequest);
     } finally {
       setLoading(false);
     }
@@ -46,7 +52,7 @@ function LoginForm() {
       // param, never a button the user clicked before logging in.
       router.replace(destinationForRole(res.staff.role));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not verify that code.");
+      setError(err instanceof ApiError ? err.message : t.login.errorVerify);
     } finally {
       setLoading(false);
     }
@@ -54,8 +60,23 @@ function LoginForm() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-ivory px-6">
-      <h1 className="mb-1 font-serif text-4xl text-navy">LOCUS</h1>
-      <p className="mb-10 text-navy/60">Staff sign in</p>
+      <div className="mb-2 flex gap-1.5">
+        {LOCALES.map((l) => (
+          <button
+            key={l}
+            onClick={() => setLocale(l)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              locale === l ? "bg-indigo text-white" : "border border-navy/15 text-navy/50 hover:bg-navy/5"
+            }`}
+          >
+            {LOCALE_LABEL[l]}
+          </button>
+        ))}
+      </div>
+
+      <Image src="/logo.png" alt="LOCUS" width={56} height={56} className="mb-3 rounded-2xl" />
+      <h1 className="mb-1 font-serif text-4xl text-navy">{t.login.title}</h1>
+      <p className="mb-10 text-navy/60">{t.login.subtitle}</p>
 
       <form
         onSubmit={step === "phone" ? requestOtp : verifyOtp}
@@ -63,7 +84,7 @@ function LoginForm() {
       >
         {step === "phone" ? (
           <>
-            <label className="mb-2 block text-sm font-medium text-navy">Staff phone number</label>
+            <label className="mb-2 block text-sm font-medium text-navy">{t.login.phoneLabel}</label>
             <div className="mb-4 flex overflow-hidden rounded-xl border border-navy/15 focus-within:border-indigo">
               <span className="flex items-center bg-navy/5 px-4 font-mono text-navy/60">+91</span>
               <input
@@ -80,14 +101,14 @@ function LoginForm() {
               disabled={loading || localNumber.length !== 10}
               className="w-full rounded-xl bg-indigo py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             >
-              {loading ? "Sending…" : "Send OTP"}
+              {loading ? t.login.sending : t.login.sendOtp}
             </button>
           </>
         ) : (
           <>
             <label className="mb-2 block text-sm font-medium text-navy">
-              Enter the code sent to {phone}
-              {demoBypassAvailable ? " (or the demo code)" : ""}
+              {t.login.otpLabelPrefix} {phone}
+              {demoBypassAvailable ? ` ${t.login.demoCodeHint}` : ""}
             </label>
             <input
               value={token}
@@ -101,10 +122,10 @@ function LoginForm() {
               disabled={loading}
               className="mb-3 w-full rounded-xl bg-indigo py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             >
-              {loading ? "Verifying…" : "Verify & Log In"}
+              {loading ? t.login.verifying : t.login.verify}
             </button>
             <button type="button" onClick={() => setStep("phone")} className="w-full text-center text-sm text-navy/50">
-              Change number
+              {t.login.changeNumber}
             </button>
           </>
         )}

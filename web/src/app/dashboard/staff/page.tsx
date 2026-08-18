@@ -4,23 +4,15 @@ import { useEffect, useState } from "react";
 
 import { ALL_STAFF_ROLES, ApiError, HUB_MANAGER_CREATABLE_ROLES, type Staff, type StaffManifest, type StaffRole, api } from "@/lib/api";
 import { useDashboard } from "@/lib/dashboardContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuthStore } from "@/lib/store/auth";
-
-const ROLE_LABEL: Record<StaffRole, string> = {
-  SUPER_ADMIN: "Super Admin",
-  HUB_MANAGER: "Hub Manager",
-  QR_PASTER: "QR Paster",
-  BILL_SCANNER: "Bill Scanner",
-  CONSOLIDATOR: "Consolidator",
-  LINE_HAUL: "Line-Haul Driver",
-  LAST_MILE: "Last-Mile Agent",
-};
 
 // Roles that ever get assigned_staff_id set on a bag/shipment via a real
 // scan — the only ones a manifest/notification is actually meaningful for.
 const LINKABLE_ROLES: StaffRole[] = ["LINE_HAUL", "LAST_MILE"];
 
 function DriverDetailPanel({ staffMember, accessToken }: { staffMember: Staff; accessToken: string }) {
+  const { t } = useTranslation();
   const [manifest, setManifest] = useState<StaffManifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -55,7 +47,7 @@ function DriverDetailPanel({ staffMember, accessToken }: { staffMember: Staff; a
       setTrackingId("");
       setSent(true);
     } catch (err) {
-      setNotifyError(err instanceof ApiError ? err.message : "Could not send this notification.");
+      setNotifyError(err instanceof ApiError ? err.message : t.staff.couldNotSend);
     } finally {
       setSending(false);
     }
@@ -64,15 +56,17 @@ function DriverDetailPanel({ staffMember, accessToken }: { staffMember: Staff; a
   return (
     <div className="mt-2 rounded-xl border border-navy/10 bg-ivory/60 p-4">
       {loading ? (
-        <p className="text-sm text-navy/40">Loading what's linked to {staffMember.name ?? "this staff member"}…</p>
+        <p className="text-sm text-navy/40">
+          {t.staff.loadingLinkedPrefix} {staffMember.name ?? t.staff.thisStaffMember}…
+        </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy/50">
-              Bags carrying ({manifest?.bags.length ?? 0})
+              {t.staff.bagsCarrying} ({manifest?.bags.length ?? 0})
             </p>
             {!manifest?.bags.length ? (
-              <p className="text-sm text-navy/40">No bags currently linked — only a real depart/arrive scan sets this.</p>
+              <p className="text-sm text-navy/40">{t.staff.noBagsLinked}</p>
             ) : (
               <div className="flex flex-col gap-1.5">
                 {manifest.bags.map((b) => (
@@ -86,10 +80,10 @@ function DriverDetailPanel({ staffMember, accessToken }: { staffMember: Staff; a
             )}
 
             <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-navy/50">
-              Packages assigned ({manifest?.shipments.length ?? 0})
+              {t.staff.packagesAssigned} ({manifest?.shipments.length ?? 0})
             </p>
             {!manifest?.shipments.length ? (
-              <p className="text-sm text-navy/40">No packages currently linked.</p>
+              <p className="text-sm text-navy/40">{t.staff.noPackagesLinked}</p>
             ) : (
               <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto">
                 {manifest.shipments.map((s) => (
@@ -104,15 +98,14 @@ function DriverDetailPanel({ staffMember, accessToken }: { staffMember: Staff; a
 
           {LINKABLE_ROLES.includes(staffMember.role) ? (
             <form onSubmit={handleNotify} className="rounded-lg border border-navy/10 bg-white p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy/50">Send a pickup notification</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy/50">{t.staff.sendNotification}</p>
               <p className="mb-3 text-xs text-navy/40">
-                This is a nudge only — it never assigns anything. {staffMember.name ?? "They"} still has to physically scan for
-                the system to actually link it.
+                {t.staff.nudgeOnlyPrefix} {staffMember.name ?? t.staff.theyDefault} {t.staff.nudgeOnlySuffix}
               </p>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="e.g. Please pick up BAG-000012 for the Kondapur run"
+                placeholder={t.staff.messagePlaceholder}
                 rows={2}
                 className="mb-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-sm text-navy"
               />
@@ -120,29 +113,29 @@ function DriverDetailPanel({ staffMember, accessToken }: { staffMember: Staff; a
                 <input
                   value={bagId}
                   onChange={(e) => setBagId(e.target.value.toUpperCase())}
-                  placeholder="Bag ID (optional)"
+                  placeholder={t.staff.bagIdOptional}
                   className="w-1/2 rounded-lg border border-navy/15 px-3 py-1.5 font-mono text-xs text-navy"
                 />
                 <input
                   value={trackingId}
                   onChange={(e) => setTrackingId(e.target.value.toUpperCase())}
-                  placeholder="Tracking ID (optional)"
+                  placeholder={t.staff.trackingIdOptional}
                   className="w-1/2 rounded-lg border border-navy/15 px-3 py-1.5 font-mono text-xs text-navy"
                 />
               </div>
               {notifyError ? <p className="mb-2 text-xs text-brick">{notifyError}</p> : null}
-              {sent ? <p className="mb-2 text-xs text-sage">Notification sent.</p> : null}
+              {sent ? <p className="mb-2 text-xs text-sage">{t.staff.notificationSent}</p> : null}
               <button
                 type="submit"
                 disabled={sending || !message.trim()}
                 className="w-full rounded-lg bg-orange py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
               >
-                {sending ? "Sending…" : "Send notification"}
+                {sending ? t.staff.sending : t.staff.sendNotificationBtn}
               </button>
             </form>
           ) : (
             <div className="rounded-lg border border-dashed border-navy/15 p-3 text-sm text-navy/40">
-              {ROLE_LABEL[staffMember.role]} doesn't carry bags or packages, so there's nothing to link or notify here.
+              {t.roles[staffMember.role]} {t.staff.noBagsNoPackagesPrefix}
             </div>
           )}
         </div>
@@ -155,6 +148,7 @@ export default function StaffPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const currentStaff = useAuthStore((s) => s.staff);
   const { hubs, previewHubId } = useDashboard();
+  const { t } = useTranslation();
 
   const isHubManager = currentStaff?.role === "HUB_MANAGER";
   const creatableRoles = isHubManager ? HUB_MANAGER_CREATABLE_ROLES : ALL_STAFF_ROLES;
@@ -199,7 +193,7 @@ export default function StaffPage() {
       setName("");
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add this staff member.");
+      setError(err instanceof ApiError ? err.message : t.staff.couldNotAdd);
     } finally {
       setSubmitting(false);
     }
@@ -207,12 +201,12 @@ export default function StaffPage() {
 
   async function handleDelete(id: string) {
     if (!accessToken) return;
-    if (!confirm("Remove this staff member? They will lose access immediately.")) return;
+    if (!confirm(t.staff.removeConfirm)) return;
     try {
       await api.deleteStaff(accessToken, id);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not remove this staff member.");
+      setError(err instanceof ApiError ? err.message : t.staff.couldNotRemove);
     }
   }
 
@@ -226,36 +220,33 @@ export default function StaffPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 rounded-card border border-navy/10 bg-white p-6 shadow-card">
           <p className="mb-4 font-serif text-xl text-navy">
-            Roster {isHubManager ? "— your hub" : ""} ({roster.length})
+            {t.staff.roster} {isHubManager ? t.staff.yourHub : ""} ({roster.length})
           </p>
           {loading ? (
-            <p className="text-navy/40">Loading…</p>
+            <p className="text-navy/40">…</p>
           ) : roster.length === 0 ? (
-            <p className="text-navy/40">No staff yet.</p>
+            <p className="text-navy/40">{t.staff.noStaffYet}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {roster.map((s) => (
                 <div key={s.id} className="rounded-xl border border-navy/10 px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
-                      className="flex-1 text-left"
-                    >
+                    <button onClick={() => setExpandedId(expandedId === s.id ? null : s.id)} className="flex-1 text-left">
                       <p className="text-navy">
                         {s.name ?? "Unnamed"} <span className="font-mono text-xs text-navy/40">{s.phone}</span>
                       </p>
                       <p className="text-xs text-navy/50">
-                        {ROLE_LABEL[s.role]} · {hubName(s.assigned_hub_id)}
+                        {t.roles[s.role]} · {hubName(s.assigned_hub_id)}
                         {s.error_points > 0 ? <span className="ml-2 text-brick">{s.error_points} error pt{s.error_points === 1 ? "" : "s"}</span> : null}
-                        <span className="ml-2 text-indigo">{expandedId === s.id ? "▲ hide details" : "▼ view details"}</span>
+                        <span className="ml-2 text-indigo">{expandedId === s.id ? `▲ ${t.staff.hideDetails}` : `▼ ${t.staff.viewDetails}`}</span>
                       </p>
                     </button>
                     {s.id !== currentStaff?.id ? (
                       <button onClick={() => handleDelete(s.id)} className="rounded-lg border border-brick px-3 py-1.5 text-xs font-semibold text-brick hover:bg-brick/5">
-                        Remove
+                        {t.common.remove}
                       </button>
                     ) : (
-                      <span className="text-xs text-navy/30">You</span>
+                      <span className="text-xs text-navy/30">{t.common.you}</span>
                     )}
                   </div>
                   {expandedId === s.id && accessToken ? <DriverDetailPanel staffMember={s} accessToken={accessToken} /> : null}
@@ -266,29 +257,29 @@ export default function StaffPage() {
         </div>
 
         <form onSubmit={handleCreate} className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-          <p className="mb-4 font-serif text-xl text-navy">Add Staff</p>
-          {isHubManager ? <p className="mb-4 text-sm text-navy/50">New staff are automatically assigned to your hub.</p> : null}
+          <p className="mb-4 font-serif text-xl text-navy">{t.staff.addStaff}</p>
+          {isHubManager ? <p className="mb-4 text-sm text-navy/50">{t.staff.autoAssignedHint}</p> : null}
 
-          <label className="mb-1 block text-sm font-medium text-navy">Phone</label>
+          <label className="mb-1 block text-sm font-medium text-navy">{t.staff.phone}</label>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mb-3 w-full rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy" />
 
-          <label className="mb-1 block text-sm font-medium text-navy">Name</label>
+          <label className="mb-1 block text-sm font-medium text-navy">{t.staff.name}</label>
           <input value={name} onChange={(e) => setName(e.target.value)} className="mb-3 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy" />
 
-          <label className="mb-1 block text-sm font-medium text-navy">Role</label>
+          <label className="mb-1 block text-sm font-medium text-navy">{t.staff.role}</label>
           <select value={role} onChange={(e) => setRole(e.target.value as StaffRole)} className="mb-3 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy">
             {creatableRoles.map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {t.roles[r]}
               </option>
             ))}
           </select>
 
           {!isHubManager && role !== "SUPER_ADMIN" ? (
             <>
-              <label className="mb-1 block text-sm font-medium text-navy">Hub</label>
+              <label className="mb-1 block text-sm font-medium text-navy">{t.staff.hub}</label>
               <select value={hubId} onChange={(e) => setHubId(e.target.value)} className="mb-3 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy">
-                <option value="">Select a hub…</option>
+                <option value="">{t.staff.selectHub}</option>
                 {hubs.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.name}
@@ -301,7 +292,7 @@ export default function StaffPage() {
           {error ? <p className="mb-3 text-sm text-brick">{error}</p> : null}
 
           <button type="submit" disabled={submitting} className="w-full rounded-lg bg-indigo py-2.5 font-semibold text-white hover:opacity-90 disabled:opacity-50">
-            {submitting ? "Adding…" : "Add Staff"}
+            {submitting ? t.common.adding : t.staff.addStaff}
           </button>
         </form>
       </div>

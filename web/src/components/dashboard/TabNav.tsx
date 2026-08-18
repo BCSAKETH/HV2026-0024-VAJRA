@@ -3,16 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const TABS = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/analytics", label: "Analytics" },
-  { href: "/dashboard/staff", label: "Staff" },
-  { href: "/dashboard/network", label: "Network" },
-  { href: "/dashboard/msmes", label: "MSMEs" },
-];
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export function TabNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
+
+  const TABS = [
+    { href: "/dashboard", label: t.nav.overview },
+    { href: "/dashboard/analytics", label: t.nav.analytics },
+    { href: "/dashboard/staff", label: t.nav.staff },
+    { href: "/dashboard/network", label: t.nav.network },
+    { href: "/dashboard/msmes", label: t.nav.msmes },
+  ];
 
   return (
     <nav className="flex gap-1 border-b border-navy/10 bg-white px-8">
