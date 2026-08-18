@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { useAuthStore } from "./store/auth";
 
 // Mobile is a separate app, not served from the Vercel domain — this needs
@@ -119,7 +120,14 @@ const REQUEST_TIMEOUT_MS = 45_000;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) };
-  if (!(init?.body instanceof FormData)) headers["Content-Type"] = "application/json";
+  const isFormData =
+    init?.body instanceof FormData ||
+    (init?.body && typeof init.body === "object" && "_parts" in init.body);
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  } else {
+    delete headers["Content-Type"];
+  }
   const token = useAuthStore.getState().accessToken;
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -144,8 +152,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 function toFormData(uris: { uri: string; name: string; type: string }[], field = "files"): FormData {
   const form = new FormData();
   for (const f of uris) {
+    let uri = f.uri;
+    if (Platform.OS === "android" && !uri.startsWith("file://") && !uri.startsWith("content://")) {
+      uri = `file://${uri}`;
+    }
     // @ts-expect-error React Native's FormData accepts this file-like shape
-    form.append(field, { uri: f.uri, name: f.name, type: f.type });
+    form.append(field, { uri, name: f.name || `photo-${Date.now()}.jpg`, type: f.type || "image/jpeg" });
   }
   return form;
 }
@@ -192,8 +204,15 @@ export const api = {
     return request<{ type: "PARCEL" | "BAG"; id: string }>(`/resolve/${encodeURIComponent(upper)}`);
   },
 
-  ocrBill: (photo: { uri: string; name: string; type: string }) =>
-    request<OcrResult>("/ocr/bill", { method: "POST", body: toFormData([photo], "file") }),
+  ocrBill: (photo: { uri: string; name: string; type: string; base64?: string }) => {
+    if (photo.base64) {
+      return request<OcrResult>("/ocr/bill-base64", {
+        method: "POST",
+        body: JSON.stringify({ image_base64: photo.base64, mime_type: photo.type || "image/jpeg" }),
+      });
+    }
+    return request<OcrResult>("/ocr/bill", { method: "POST", body: toFormData([photo], "file") });
+  },
 
   msmeByPhone: (phone: string) => request<{ id: string; business_name: string; owner_name: string | null; phone: string; pincode: string | null }>(`/msmes/by-phone/${encodeURIComponent(phone)}`),
 
@@ -215,11 +234,19 @@ export const api = {
     }
   ) => request<Shipment>(`/shipments/${trackingId}/intake`, { method: "POST", body: JSON.stringify(payload) }),
 
-  uploadConditionPhotos: (trackingId: string, photos: { uri: string; name: string; type: string }[]) =>
-    request<{ tracking_id: string; condition_photo_urls: string[] }>(`/shipments/${trackingId}/condition-photos`, {
+  uploadConditionPhotos: (trackingId: string, photos: { uri: string; name: string; type: string; base64?: string }[]) => {
+    const hasBase64 = photos.length > 0 && photos.every((p) => Boolean(p.base64));
+    if (hasBase64) {
+      return request<{ tracking_id: string; condition_photo_urls: string[] }>(`/shipments/${trackingId}/condition-photos-base64`, {
+        method: "POST",
+        body: JSON.stringify({ photos: photos.map((p) => p.base64!), mime_type: "image/jpeg" }),
+      });
+    }
+    return request<{ tracking_id: string; condition_photo_urls: string[] }>(`/shipments/${trackingId}/condition-photos`, {
       method: "POST",
       body: toFormData(photos, "files"),
-    }),
+    });
+  },
 
   getBag: (bagId: string) => request<Bag>(`/bags/${bagId}`),
 

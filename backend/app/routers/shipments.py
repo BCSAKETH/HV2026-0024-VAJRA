@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.core.geocode import geocode_address
@@ -148,6 +149,42 @@ async def upload_condition_photos(
         if not content:
             continue
         new_urls.append(upload_condition_photo(tracking_id, content, f.content_type or "image/jpeg"))
+
+    all_urls = [*shipment["condition_photo_urls"], *new_urls]
+    admin.table("shipments").update({"condition_photo_urls": all_urls}).eq("tracking_id", tracking_id).execute()
+
+    return ConditionPhotosOut(tracking_id=tracking_id, condition_photo_urls=all_urls)
+
+
+class ConditionPhotosBase64In(BaseModel):
+    photos: list[str]
+    mime_type: str = "image/jpeg"
+
+
+@router.post("/shipments/{tracking_id}/condition-photos-base64", response_model=ConditionPhotosOut)
+async def upload_condition_photos_base64(
+    tracking_id: str,
+    payload: ConditionPhotosBase64In,
+    staff: Annotated[dict, Depends(require_roles(*_INTAKE_ROLES))],
+) -> ConditionPhotosOut:
+    """JSON/Base64 alternative for mobile clients to avoid Android native multipart upload crashes."""
+    import base64
+    admin = get_admin_client()
+    shipment = _get_shipment_or_404(admin, tracking_id)
+
+    if len(payload.photos) > 4:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 4 condition photos per upload")
+
+    new_urls: list[str] = []
+    for raw_photo in payload.photos:
+        raw_b64 = raw_photo
+        if "," in raw_b64:
+            raw_b64 = raw_b64.split(",", 1)[1]
+        try:
+            content = base64.b64decode(raw_b64)
+        except Exception:
+            continue
+        new_urls.append(upload_condition_photo(tracking_id, content, payload.mime_type or "image/jpeg"))
 
     all_urls = [*shipment["condition_photo_urls"], *new_urls]
     admin.table("shipments").update({"condition_photo_urls": all_urls}).eq("tracking_id", tracking_id).execute()

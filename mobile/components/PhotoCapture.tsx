@@ -1,5 +1,5 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import * as ImageManipulator from "expo-image-manipulator";
 import { useRef, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
 
@@ -19,6 +19,7 @@ export interface CapturedPhoto {
   uri: string;
   name: string;
   type: string;
+  base64?: string;
 }
 
 interface Props {
@@ -37,26 +38,37 @@ export function PhotoCapture({ onCaptured, hint }: Props) {
   async function handleCapture() {
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
-    let photo: { uri: string; width?: number; height?: number } | undefined;
+    let photo: { uri: string; width?: number; height?: number; base64?: string } | undefined;
     try {
-      photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      photo = await cameraRef.current.takePictureAsync({ quality: 0.6, base64: true });
       if (!photo) return;
 
-      // Resize (not just compress) before it ever gets near the network --
-      // see MAX_DIMENSION comment above for why quality alone wasn't enough.
-      const context = ImageManipulator.manipulate(photo.uri);
-      const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0);
-      context.resize(isLandscape ? { width: MAX_DIMENSION, height: null } : { width: null, height: MAX_DIMENSION });
-      const rendered = await context.renderAsync();
-      const resized = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+      // Resize (not just compress) before it ever gets near the network.
+      // manipulateAsync is the battle-tested, universal Expo API.
+      const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0) && (photo.width ?? 0) > 0;
+      const resizeAction = isLandscape ? { resize: { width: MAX_DIMENSION } } : { resize: { width: MAX_DIMENSION } };
+      const resized = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [resizeAction],
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
 
-      setPreview({ uri: resized.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
+      setPreview({
+        uri: resized.uri,
+        name: `photo-${Date.now()}.jpg`,
+        type: "image/jpeg",
+        base64: resized.base64 || photo.base64,
+      });
     } catch {
-      // If resizing itself fails for any reason, fall back to the original
-      // capture already in hand rather than losing the photo or firing the
-      // shutter a second time -- still functional, just without the size
-      // guarantee that resize would have added.
-      if (photo) setPreview({ uri: photo.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
+      // Fallback if resizing fails
+      if (photo) {
+        setPreview({
+          uri: photo.uri,
+          name: `photo-${Date.now()}.jpg`,
+          type: "image/jpeg",
+          base64: photo.base64,
+        });
+      }
     } finally {
       setCapturing(false);
     }
