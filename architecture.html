@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOCUS Architecture Overview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ivory: "#F8F5EF",
+                        navy: "#172B3A",
+                        indigo: "#4F46E5",
+                        orange: "#E76F2F",
+                        sage: "#6B8F71",
+                        brick: "#B84A3A",
+                    },
+                    fontFamily: {
+                        serif: ['Newsreader', 'serif'],
+                        sans: ['IBM Plex Sans', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8F5EF; color: #172B3A; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(23, 43, 58, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(23, 43, 58, 0.05), 0 2px 4px -1px rgba(23, 43, 58, 0.03);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen pb-20">
+
+    <!-- Header -->
+    <header class="bg-navy text-ivory py-16 px-6 text-center shadow-lg">
+        <h1 class="font-serif text-5xl font-semibold mb-4">LOCUS Architecture</h1>
+        <p class="text-xl max-w-2xl mx-auto opacity-90 font-light">A simple, top-down view of our logistics operating system. Designed for enterprise-scale security with MSME-scale simplicity.</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 mt-12 space-y-16">
+
+        <!-- SECTION 1: System Actors -->
+        <section>
+            <div class="mb-8 border-b border-navy/10 pb-4">
+                <h2 class="font-serif text-4xl text-indigo">1. Who Uses LOCUS?</h2>
+                <p class="text-navy/70 mt-2 text-lg">The system assigns capabilities based on strict Role-Based Access Control (RBAC).</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Management -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-indigo/10 rounded-xl flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h3 class="font-serif text-2xl font-medium mb-2">Web Command Center</h3>
+                    <p class="text-sm text-navy/60 font-mono mb-4">Super Admin • Hub Manager</p>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-indigo"></span> View Dashboard KPIs & Live Map</li>
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-indigo"></span> Monitor Security Inbox</li>
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-indigo"></span> Manage Staff, Hubs & Routes</li>
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-indigo"></span> Generate QR Code Batches</li>
+                    </ul>
+                </div>
+
+                <!-- Field Staff -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-orange/10 rounded-xl flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h3 class="font-serif text-2xl font-medium mb-2">Mobile Ops App</h3>
+                    <p class="text-sm text-navy/60 font-mono mb-4">Warehouse • Line-Haul • Last-Mile</p>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange"></span> Intake & Consolidate Parcels</li>
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange"></span> Scan Bags for Transit</li>
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange"></span> GPS-Locked Delivery Drop-offs</li>
+                    </ul>
+                </div>
+
+                <!-- Customers -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-sage/10 rounded-xl flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                    </div>
+                    <h3 class="font-serif text-2xl font-medium mb-2">Public Web</h3>
+                    <p class="text-sm text-navy/60 font-mono mb-4">Customers (No Auth Required)</p>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-sage"></span> Track Package Status</li>
+                        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-sage"></span> View Verified 3D Journey</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Domain Model -->
+        <section>
+            <div class="mb-8 border-b border-navy/10 pb-4">
+                <h2 class="font-serif text-4xl text-orange">2. The Core Data Engine</h2>
+                <p class="text-navy/70 mt-2 text-lg">How the backend constructs an unbreakable chain of custody.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Data Nodes -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl p-5 border-l-4 border-indigo shadow-sm">
+                        <h4 class="font-mono text-indigo font-semibold mb-1">Shipment & Bag</h4>
+                        <p class="text-sm text-navy/80">The physical items. Shipments are individual parcels that get packed into Bags. Bags are assigned to Hubs or Staff during transit.</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-5 border-l-4 border-sage shadow-sm">
+                        <h4 class="font-mono text-sage font-semibold mb-1">Hub & PincodeRoute</h4>
+                        <p class="text-sm text-navy/80">The geographical backbone. Hubs own specific Pincode Routes. Staff are strictly assigned to specific Hubs.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl p-5 border-l-4 border-brick shadow-sm">
+                        <h4 class="font-mono text-brick font-semibold mb-1">TrackingEvent & SecurityEvent</h4>
+                        <p class="text-sm text-navy/80">The Immutable Ledger. Every scan logs a Tracking Event. If the system detects tampering (like teleportation speed), it escalates to a Security Event (e.g., COMPROMISED, AUTO_HEALED).</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-5 border-l-4 border-navy shadow-sm">
+                        <h4 class="font-mono text-navy font-semibold mb-1">Staff & Role</h4>
+                        <p class="text-sm text-navy/80">Defines who did what. Every physical action requires an authenticated Staff ID, eliminating anonymous errors.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: The 3D Engine -->
+        <section>
+            <div class="mb-8 border-b border-navy/10 pb-4">
+                <h2 class="font-serif text-4xl text-sage">3. The 3D Rendering Engine</h2>
+                <p class="text-navy/70 mt-2 text-lg">A modular approach to high-performance visual storytelling.</p>
+            </div>
+
+            <div class="glass-card rounded-3xl p-8 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-sage/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                
+                <div class="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+                    <div class="flex-1">
+                        <h3 class="font-mono text-xl font-bold text-navy mb-4">&laquo;abstract&raquo; Scene3D</h3>
+                        <p class="text-navy/80 mb-6">Every 3D scene in LOCUS inherits from a master <code>Scene3D</code> class. This ensures that features like <strong>reduced-motion</strong> and <strong>low-power fallback</strong> are handled automatically across the entire app without rewriting code.</p>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-3">
+                                <div class="bg-navy text-ivory text-xs px-2 py-1 rounded font-mono mt-0.5">PackageBoxScene</div>
+                                <p class="text-sm text-navy/70">A standalone visual that can open or sit idle. No external data dependencies.</p>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <div class="bg-navy text-ivory text-xs px-2 py-1 rounded font-mono mt-0.5">JourneyPath3D</div>
+                                <p class="text-sm text-navy/70">Derives its waypoints directly from the <em>TrackingEvent</em> ledger to draw the path.</p>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <div class="bg-navy text-ivory text-xs px-2 py-1 rounded font-mono mt-0.5">HubSelector3D</div>
+                                <p class="text-sm text-navy/70">Drives the <em>DashboardScope</em>, letting managers select a hub visually.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/3 bg-white/50 rounded-2xl p-6 border border-navy/5 shadow-inner flex flex-col items-center justify-center text-center">
+                        <svg class="w-16 h-16 text-sage mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                        <p class="font-serif font-medium text-lg text-navy">Component Contract</p>
+                        <p class="text-xs text-navy/50 mt-2 font-mono">Domain types and 3D scenes are completely decoupled for maximum performance.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center pb-12 text-navy/40 font-mono text-sm">
+        <p>LOCUS — The Exact Point of Truth</p>
+    </footer>
+
+</body>
+</html>
