@@ -65,6 +65,15 @@ async def confirm_intake(
             detail=f"'{tracking_id}' has already moved past intake (status={shipment['status']}).",
         )
 
+    # This must be checked BEFORE the update below, since the update itself
+    # moves status to CREATED — this flag distinguishes a genuine first
+    # confirm from a retry/edit of an already-confirmed intake. Without it,
+    # a client that retries on a timeout (even though the first call already
+    # succeeded) re-logs an INTAKE event and re-sends the SMS receipt every
+    # single retry — confirmed live: one flaky mobile submission produced 4
+    # duplicate INTAKE events and 4 duplicate SMS to the same customer.
+    is_first_confirm = shipment["status"] == "PRE_ALLOCATED"
+
     update: dict = {"status": "CREATED"}
     for field in (
         "recipient_name",
@@ -94,24 +103,29 @@ async def confirm_intake(
     updated = admin.table("shipments").update(update).eq("tracking_id", tracking_id).execute()
     row = updated.data[0]
 
-    admin.table("tracking_events").insert(
-        {
-            "tracking_id": tracking_id,
-            "event_type": "INTAKE",
-            "lat": payload.staff_lat,
-            "lng": payload.staff_lng,
-            "staff_id": staff["id"],
-        }
-    ).execute()
+    # Only the genuine first confirm gets a ledger entry and an SMS. A retry
+    # or a manual correction of an already-CREATED shipment updates the
+    # fields (a real, useful thing — e.g. fixing a bad OCR read) but must
+    # not spam the customer or duplicate the immutable tracking_events log.
+    if is_first_confirm:
+        admin.table("tracking_events").insert(
+            {
+                "tracking_id": tracking_id,
+                "event_type": "INTAKE",
+                "lat": payload.staff_lat,
+                "lng": payload.staff_lng,
+                "staff_id": staff["id"],
+            }
+        ).execute()
 
-    if row.get("recipient_phone"):
-        settings = get_settings()
-        # shortcode, not tracking_id -- the public /track/[id] page accepts
-        # either, but the sequential tracking_id (TRK-000017, ...) is
-        # trivially enumerable by incrementing the number in the URL. The
-        # shortcode is a cryptographically random 6-char code instead.
-        tracking_url = f"{settings.PUBLIC_WEB_BASE_URL}/track/{row['shortcode']}"
-        await send_intake_receipt(row["recipient_phone"], tracking_id, tracking_url)
+        if row.get("recipient_phone"):
+            settings = get_settings()
+            # shortcode, not tracking_id -- the public /track/[id] page accepts
+            # either, but the sequential tracking_id (TRK-000017, ...) is
+            # trivially enumerable by incrementing the number in the URL. The
+            # shortcode is a cryptographically random 6-char code instead.
+            tracking_url = f"{settings.PUBLIC_WEB_BASE_URL}/track/{row['shortcode']}"
+            await send_intake_receipt(row["recipient_phone"], tracking_id, tracking_url)
 
     return ShipmentOut(**row)
 

@@ -16,27 +16,54 @@ export function LocusGridAnimation({ onComplete }: { onComplete: () => void }) {
   const pathRef = useRef<SVGPathElement>(null);
 
   useEffect(() => {
-    if (!pathRef.current) return;
+    // Real customers open this from an SMS link — if GSAP ever fails to
+    // fire onComplete (a webview quirk, MotionPathPlugin not registering,
+    // a thrown error mid-timeline, anything), the intro's fixed inset-0
+    // overlay would sit there forever and permanently hide the real
+    // tracking content behind it. This hard timeout is the guarantee that
+    // can never happen — worst case, the decorative animation gets cut
+    // short; the timeline underneath always gets shown.
+    const safetyNet = setTimeout(onComplete, 3000);
+
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      clearTimeout(safetyNet);
+      onComplete();
+      return;
+    }
+
+    if (!pathRef.current) return () => clearTimeout(safetyNet);
     const path = pathRef.current;
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          gsap.to(containerRef.current, { opacity: 0, duration: 0.5, onComplete });
-        },
-      });
+    let ctx: gsap.Context | undefined;
+    try {
+      ctx = gsap.context(() => {
+        const tl = gsap.timeline({
+          onComplete: () => {
+            clearTimeout(safetyNet);
+            gsap.to(containerRef.current, { opacity: 0, duration: 0.5, onComplete });
+          },
+        });
 
-      tl.set(dotRef.current, { opacity: 1 });
-      tl.to(dotRef.current, {
-        motionPath: { path, align: path, alignOrigin: [0.5, 0.5] },
-        duration: 2.1,
-        ease: "power2.inOut",
-      });
-      // pulsing glow, independent of the travel tween
-      gsap.to(dotRef.current, { scale: 1.6, opacity: 0.6, duration: 0.5, repeat: 3, yoyo: true, ease: "sine.inOut" });
-    }, containerRef);
+        tl.set(dotRef.current, { opacity: 1 });
+        tl.to(dotRef.current, {
+          motionPath: { path, align: path, alignOrigin: [0.5, 0.5] },
+          duration: 2.1,
+          ease: "power2.inOut",
+        });
+        // pulsing glow, independent of the travel tween
+        gsap.to(dotRef.current, { scale: 1.6, opacity: 0.6, duration: 0.5, repeat: 3, yoyo: true, ease: "sine.inOut" });
+      }, containerRef);
+    } catch {
+      // Same guarantee as above, for a synchronous throw instead of a hang.
+      clearTimeout(safetyNet);
+      onComplete();
+    }
 
-    return () => ctx.revert();
+    return () => {
+      clearTimeout(safetyNet);
+      ctx?.revert();
+    };
   }, [onComplete]);
 
   return (
