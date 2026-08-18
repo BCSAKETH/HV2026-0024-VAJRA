@@ -1,6 +1,19 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { useRef, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
+
+// Empirically confirmed against the live backend: Vercel's serverless
+// function body limit rejects uploads above ~4.5MB outright (413), and a
+// weak connection can drop the upload mid-transfer before that even
+// happens, which looks identical to a generic "could not reach server"
+// error on the client. JPEG quality alone doesn't reliably keep a modern
+// phone camera's actual pixel dimensions under any size budget -- a high
+// native resolution at low quality can still land multiple MB. Capping
+// the longest edge at 1600px is what actually bounds the file size; a
+// bill/parcel photo doesn't need more resolution than that to stay fully
+// legible for OCR or condition-proof review.
+const MAX_DIMENSION = 1600;
 
 export interface CapturedPhoto {
   uri: string;
@@ -24,17 +37,26 @@ export function PhotoCapture({ onCaptured, hint }: Props) {
   async function handleCapture() {
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
+    let photo: { uri: string; width?: number; height?: number } | undefined;
     try {
-      // 0.5, not 0.7 -- a modern phone camera at 0.7 JPEG quality is
-      // routinely 2-4MB, which on a weak/asymmetric mobile-data uplink can
-      // fail to complete the multipart upload at all (confirmed live: an
-      // OCR attempt that never even reached the backend, while small JSON
-      // calls succeeded fine in the same window). 0.5 is still perfectly
-      // legible for OCR text extraction and roughly halves the payload.
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
-      if (photo) {
-        setPreview({ uri: photo.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
-      }
+      photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      if (!photo) return;
+
+      // Resize (not just compress) before it ever gets near the network --
+      // see MAX_DIMENSION comment above for why quality alone wasn't enough.
+      const context = ImageManipulator.manipulate(photo.uri);
+      const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0);
+      context.resize(isLandscape ? { width: MAX_DIMENSION, height: null } : { width: null, height: MAX_DIMENSION });
+      const rendered = await context.renderAsync();
+      const resized = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+
+      setPreview({ uri: resized.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
+    } catch {
+      // If resizing itself fails for any reason, fall back to the original
+      // capture already in hand rather than losing the photo or firing the
+      // shutter a second time -- still functional, just without the size
+      // guarantee that resize would have added.
+      if (photo) setPreview({ uri: photo.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
     } finally {
       setCapturing(false);
     }
