@@ -25,7 +25,13 @@ export function PhotoCapture({ onCaptured, hint }: Props) {
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      // 0.5, not 0.7 -- a modern phone camera at 0.7 JPEG quality is
+      // routinely 2-4MB, which on a weak/asymmetric mobile-data uplink can
+      // fail to complete the multipart upload at all (confirmed live: an
+      // OCR attempt that never even reached the backend, while small JSON
+      // calls succeeded fine in the same window). 0.5 is still perfectly
+      // legible for OCR text extraction and roughly halves the payload.
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
       if (photo) {
         setPreview({ uri: photo.uri, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
       }

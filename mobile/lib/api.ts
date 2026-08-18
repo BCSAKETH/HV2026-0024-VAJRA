@@ -110,13 +110,33 @@ async function parseErrorDetail(res: Response): Promise<ApiError> {
   return new ApiError(res.status, typeof detail === "string" ? detail : `Request failed with ${res.status}`);
 }
 
+// Bare fetch() has no default timeout — on a weak/asymmetric connection a
+// multipart upload (bill photo, condition photos) can hang indefinitely
+// with no error at all, which is indistinguishable from the app being
+// frozen. 45s is generous for a real upload but guarantees a clear,
+// catchable failure instead of a silent forever-spinner.
+const REQUEST_TIMEOUT_MS = 45_000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) };
   if (!(init?.body instanceof FormData)) headers["Content-Type"] = "application/json";
   const token = useAuthStore.getState().accessToken;
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError(0, "The request timed out — check your connection and try again.");
+    }
+    throw new ApiError(0, "Could not reach the LOCUS server. Check your connection and try again.");
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) throw await parseErrorDetail(res);
   return res.json() as Promise<T>;
 }
