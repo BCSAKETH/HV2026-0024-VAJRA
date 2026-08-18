@@ -25,8 +25,19 @@ TOLERANCE_PCT = 1.5
 HIGH_VALUE_THRESHOLD = 5000
 
 
+# Read-only lookup, used at a different stage by every role that ever
+# touches a bag's lifecycle -- Consolidator packs it, Line-Haul scans it to
+# depart/arrive (linehaul.tsx calls this as its first step, before either
+# action), Last-Mile unseals/claims from it. Narrowing this to
+# CONSOLIDATOR/SUPER_ADMIN/HUB_MANAGER only (its original scope, from before
+# the role split) silently 403'd real Line-Haul drivers trying to scan a bag
+# at all -- confirmed live. No mutation happens here, so there's no
+# authorization reason to exclude any of them.
+_BAG_VIEW_ROLES = ("CONSOLIDATOR", "LINE_HAUL", "LAST_MILE", "HUB_MANAGER", "SUPER_ADMIN")
+
+
 @router.get("/{bag_id}", response_model=BagOut)
-def get_bag(bag_id: str, staff: Annotated[dict, Depends(require_roles(*_ROLES, "HUB_MANAGER"))]) -> BagOut:
+def get_bag(bag_id: str, staff: Annotated[dict, Depends(require_roles(*_BAG_VIEW_ROLES))]) -> BagOut:
     admin = get_admin_client()
     return _bag_out(admin, _get_bag_or_404(admin, bag_id))
 
