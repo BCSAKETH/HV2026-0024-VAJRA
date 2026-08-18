@@ -104,8 +104,14 @@ export default function IntakeScreen() {
         msme_business_name: extracted.sender_name ?? f.msme_business_name,
         msme_phone: extracted.sender_phone ?? f.msme_phone,
       }));
-    } catch {
-      setError("Couldn't read the bill automatically — fill it in below.");
+    } catch (e) {
+      // This used to be one blanket message no matter why it failed --
+      // timeout, dropped connection, and a genuine Mistral read failure all
+      // looked identical, which made it impossible to tell "your photo was
+      // hard to read" apart from "the upload never went through" from the
+      // error text alone. Surface the real reason now.
+      const reason = e instanceof ApiError ? e.message : "Unknown error";
+      setError(`Couldn't read the bill automatically (${reason}) — fill it in below.`);
     } finally {
       setStep("review");
     }
