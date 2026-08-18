@@ -8,35 +8,27 @@
 -- a mobile scanner) — BILL_SCANNER and CONSOLIDATOR are mobile, same as
 -- WAREHOUSE_STAFF was.
 --
--- Postgres can't drop a value from an enum type directly, so this creates
--- the new type, migrates the column across, then drops the old type.
+-- Postgres can't drop a value from an enum type in place, and this
+-- project's `staff_role` type is referenced by several RLS policies and
+-- by current_staff_role() — dropping/recreating the type (the originally
+-- planned approach) would require CASCADE-dropping every one of those and
+-- hand-rewriting them blind, which is far riskier than necessary here.
+--
+-- Postgres DOES allow adding new enum values without touching the type's
+-- identity, so that's what this does instead. WAREHOUSE_STAFF stays in
+-- the type's value list forever as a harmless, permanently-unused legacy
+-- value — nothing in the app ever assigns it again after this runs.
+--
+-- IMPORTANT: ALTER TYPE ... ADD VALUE cannot be used in the same
+-- transaction as a statement that references the new value, so the ADD
+-- VALUE statements and the UPDATE below must run as two separate calls
+-- (two separate SQL Editor executions), not pasted and run together.
 -- =========================================================
 
-create type staff_role_new as enum (
-  'SUPER_ADMIN',
-  'HUB_MANAGER',
-  'QR_PASTER',     -- web — Digital Printer. Generates + "prints" QRs, pastes physically.
-  'BILL_SCANNER',  -- mobile — Intake: bill photo -> OCR -> proof-of-condition -> confirm.
-  'CONSOLIDATOR',  -- mobile — Master Bag: scan bag -> pick destination hub -> scan children in.
-  'LINE_HAUL',     -- mobile — middle-mile transit driver
-  'LAST_MILE'      -- mobile — last-mile delivery agent
-);
+-- Run this block first, on its own:
+alter type staff_role add value 'QR_PASTER';
+alter type staff_role add value 'BILL_SCANNER';
+alter type staff_role add value 'CONSOLIDATOR';
 
-alter table public.staff add column role_new staff_role_new;
-
--- Any existing WAREHOUSE_STAFF account becomes BILL_SCANNER by default —
--- a reasonable landing spot, reassignable afterward via the Staff tab if
--- that particular person should actually be a CONSOLIDATOR or QR_PASTER.
-update public.staff set role_new = (
-  case role::text
-    when 'WAREHOUSE_STAFF' then 'BILL_SCANNER'
-    else role::text
-  end
-)::staff_role_new;
-
-alter table public.staff alter column role_new set not null;
-alter table public.staff drop column role;
-alter table public.staff rename column role_new to role;
-
-drop type staff_role;
-alter type staff_role_new rename to staff_role;
+-- Then run this separately, after the above has committed:
+-- update public.staff set role = 'BILL_SCANNER' where role = 'WAREHOUSE_STAFF';
