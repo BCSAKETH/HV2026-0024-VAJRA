@@ -104,21 +104,40 @@ export default function NetworkPage() {
             {t.network.hubs} ({hubs.length})
           </p>
           <div className="mb-5 flex flex-col gap-2">
-            {hubs.map((h) => (
-              <div key={h.id} className="flex items-center justify-between rounded-xl border border-navy/10 px-4 py-3">
-                <div>
-                  <p className="text-navy">{h.name}</p>
-                  <p className="font-mono text-xs text-navy/50">
-                    {h.type} · {h.gps_lat.toFixed(4)}, {h.gps_lng.toFixed(4)}
-                  </p>
+            {hubs.map((h) => {
+              const isSorting = h.type === "SORTING_CENTER";
+              return (
+                <div key={h.id} className="flex items-center gap-3 rounded-xl border border-navy/10 px-4 py-3 transition hover:border-navy/20">
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg ${
+                      isSorting ? "bg-indigo/10 text-indigo" : "bg-orange/10 text-orange"
+                    }`}
+                  >
+                    {isSorting ? "⬡" : "▣"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-navy">{h.name}</p>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          isSorting ? "bg-indigo/10 text-indigo" : "bg-orange/10 text-orange"
+                        }`}
+                      >
+                        {isSorting ? t.network.sortingCenter : t.network.warehouse}
+                      </span>
+                      <span className="font-mono text-xs text-navy/40">
+                        {h.gps_lat.toFixed(4)}, {h.gps_lng.toFixed(4)}
+                      </span>
+                    </div>
+                  </div>
+                  {isSuperAdmin ? (
+                    <button onClick={() => handleDeleteHub(h.id)} className="shrink-0 rounded-lg border border-brick px-3 py-1.5 text-xs font-semibold text-brick hover:bg-brick/5">
+                      {t.common.remove}
+                    </button>
+                  ) : null}
                 </div>
-                {isSuperAdmin ? (
-                  <button onClick={() => handleDeleteHub(h.id)} className="rounded-lg border border-brick px-3 py-1.5 text-xs font-semibold text-brick hover:bg-brick/5">
-                    {t.common.remove}
-                  </button>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
             {hubs.length === 0 ? <p className="text-navy/40">{t.network.noHubsYet}</p> : null}
           </div>
 

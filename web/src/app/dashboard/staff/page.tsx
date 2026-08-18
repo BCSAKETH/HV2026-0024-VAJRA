@@ -11,6 +11,27 @@ import { useAuthStore } from "@/lib/store/auth";
 // scan — the only ones a manifest/notification is actually meaningful for.
 const LINKABLE_ROLES: StaffRole[] = ["LINE_HAUL", "LAST_MILE"];
 
+// Grouped by function, not individually — admin-tier roles read as one
+// color family, floor/warehouse roles another, transit/delivery a third.
+// Gives the roster visual structure at a glance instead of a flat list of
+// same-weight gray text rows.
+const ROLE_COLOR: Record<StaffRole, string> = {
+  SUPER_ADMIN: "#4F46E5",
+  HUB_MANAGER: "#4F46E5",
+  QR_PASTER: "#E76F2F",
+  BILL_SCANNER: "#E76F2F",
+  CONSOLIDATOR: "#E76F2F",
+  LINE_HAUL: "#6B8F71",
+  LAST_MILE: "#6B8F71",
+};
+
+function initialsFor(name: string | null, phone: string): string {
+  const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return phone.slice(-2);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
 function DriverDetailPanel({ staffMember, accessToken }: { staffMember: Staff; accessToken: string }) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<StaffManifest | null>(null);
@@ -229,24 +250,45 @@ export default function StaffPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {roster.map((s) => (
-                <div key={s.id} className="rounded-xl border border-navy/10 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <button onClick={() => setExpandedId(expandedId === s.id ? null : s.id)} className="flex-1 text-left">
-                      <p className="text-navy">
-                        {s.name ?? "Unnamed"} <span className="font-mono text-xs text-navy/40">{s.phone}</span>
-                      </p>
-                      <p className="text-xs text-navy/50">
-                        {t.roles[s.role]} · {hubName(s.assigned_hub_id)}
-                        {s.error_points > 0 ? <span className="ml-2 text-brick">{s.error_points} error pt{s.error_points === 1 ? "" : "s"}</span> : null}
-                        <span className="ml-2 text-indigo">{expandedId === s.id ? `▲ ${t.staff.hideDetails}` : `▼ ${t.staff.viewDetails}`}</span>
-                      </p>
+                <div
+                  key={s.id}
+                  className={`rounded-xl border px-4 py-3 transition ${expandedId === s.id ? "border-indigo/30 bg-indigo/5" : "border-navy/10 hover:border-navy/20"}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setExpandedId(expandedId === s.id ? null : s.id)} className="flex flex-1 items-center gap-3 text-left">
+                      <span
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                        style={{ backgroundColor: ROLE_COLOR[s.role] }}
+                      >
+                        {initialsFor(s.name, s.phone)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-navy">
+                          {s.name ?? "Unnamed"} <span className="font-mono text-xs text-navy/40">{s.phone}</span>
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
+                            style={{ backgroundColor: ROLE_COLOR[s.role] }}
+                          >
+                            {t.roles[s.role]}
+                          </span>
+                          <span className="text-xs text-navy/50">{hubName(s.assigned_hub_id)}</span>
+                          {s.error_points > 0 ? (
+                            <span className="rounded-full border border-brick/30 bg-brick/10 px-2 py-0.5 text-[11px] font-semibold text-brick">
+                              {s.error_points} error pt{s.error_points === 1 ? "" : "s"}
+                            </span>
+                          ) : null}
+                          <span className="text-xs text-indigo">{expandedId === s.id ? `▲ ${t.staff.hideDetails}` : `▼ ${t.staff.viewDetails}`}</span>
+                        </div>
+                      </div>
                     </button>
                     {s.id !== currentStaff?.id ? (
-                      <button onClick={() => handleDelete(s.id)} className="rounded-lg border border-brick px-3 py-1.5 text-xs font-semibold text-brick hover:bg-brick/5">
+                      <button onClick={() => handleDelete(s.id)} className="shrink-0 rounded-lg border border-brick px-3 py-1.5 text-xs font-semibold text-brick hover:bg-brick/5">
                         {t.common.remove}
                       </button>
                     ) : (
-                      <span className="text-xs text-navy/30">{t.common.you}</span>
+                      <span className="shrink-0 rounded-full bg-navy/5 px-2.5 py-1 text-xs text-navy/40">{t.common.you}</span>
                     )}
                   </div>
                   {expandedId === s.id && accessToken ? <DriverDetailPanel staffMember={s} accessToken={accessToken} /> : null}

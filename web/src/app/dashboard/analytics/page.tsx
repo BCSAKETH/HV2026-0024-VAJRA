@@ -18,9 +18,16 @@ const STATUS_COLOR: Record<string, string> = {
   OUT_FOR_DELIVERY: "bg-orange",
 };
 
-function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+const STAT_ACCENT: Record<string, string> = {
+  indigo: "border-l-indigo",
+  sage: "border-l-sage",
+  brick: "border-l-brick",
+  orange: "border-l-orange",
+};
+
+function StatCard({ label, value, sub, accent = "indigo" }: { label: string; value: string | number; sub?: string; accent?: keyof typeof STAT_ACCENT }) {
   return (
-    <div className="rounded-xl border border-navy/10 bg-white p-4">
+    <div className={`rounded-xl border border-navy/10 border-l-4 bg-white p-4 ${STAT_ACCENT[accent]}`}>
       <p className="text-xs uppercase tracking-wide text-navy/50">{label}</p>
       <p className="mt-1 font-serif text-2xl text-navy">{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-navy/40">{sub}</p> : null}
@@ -75,19 +82,21 @@ export default function AnalyticsPage() {
 
       {analytics ? (
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <StatCard label={t.analytics.intake} value={analytics.throughput.intake_count} />
-          <StatCard label={t.analytics.delivered} value={analytics.throughput.delivered_count} />
-          <StatCard label={t.analytics.rtoRate} value={`${analytics.throughput.rto_rate_pct}%`} sub={`${analytics.throughput.rto_count} ${t.analytics.returned}`} />
-          <StatCard label={t.analytics.bagsAwaitingPickup} value={analytics.throughput.bags_awaiting_pickup} sub={t.analytics.bagsAwaitingPickupSub} />
+          <StatCard label={t.analytics.intake} value={analytics.throughput.intake_count} accent="indigo" />
+          <StatCard label={t.analytics.delivered} value={analytics.throughput.delivered_count} accent="sage" />
+          <StatCard label={t.analytics.rtoRate} value={`${analytics.throughput.rto_rate_pct}%`} sub={`${analytics.throughput.rto_count} ${t.analytics.returned}`} accent="brick" />
+          <StatCard label={t.analytics.bagsAwaitingPickup} value={analytics.throughput.bags_awaiting_pickup} sub={t.analytics.bagsAwaitingPickupSub} accent="orange" />
           <StatCard
             label={t.analytics.avgDwellTime}
             value={analytics.throughput.avg_dwell_hours !== null ? `${analytics.throughput.avg_dwell_hours}h` : "—"}
             sub={t.analytics.avgDwellTimeSub}
+            accent="orange"
           />
           <StatCard
             label={t.analytics.valueInTransit}
             value={formatMoney(analytics.value_risk.value_in_transit)}
             sub={`${t.analytics.ofTotal} ${formatMoney(analytics.value_risk.total_declared_value)} ${t.analytics.total}`}
+            accent="indigo"
           />
         </div>
       ) : null}
