@@ -1,4 +1,5 @@
-"""Seed demo hubs, pincode routes and staff accounts.
+"""Seed the real hub network, pincode routes, and full per-hub staffing model
+onto a fresh local dev database — mirrors exactly what's live in production.
 
 Run from the backend/ directory (with the venv active and .env populated):
     python -m app.seed
@@ -14,34 +15,95 @@ from app.core.supabase_client import fetch_one, get_admin_client
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger("locus.seed")
 
-# Hyderabad-area coordinates so Haversine/geofence/TSP logic has something
-# realistic to chew on later in the build.
+# The 5 real Hyderabad hubs, anchored on ORR/IRR for fast inter-hub trucking.
+# Coordinates are live-verified against Nominatim (OSM), not guessed —
+# they're the real locality centroids for Jeedimetla / Shamshabad /
+# Patancheru / Cherlapally / Balanagar.
 HUBS = [
-    {"name": "Gachibowli Sorting Center", "type": "SORTING_CENTER", "gps_lat": 17.4400, "gps_lng": 78.3489},
-    {"name": "Hitec City Warehouse", "type": "WAREHOUSE", "gps_lat": 17.4485, "gps_lng": 78.3762},
-    {"name": "Begumpet Hub", "type": "WAREHOUSE", "gps_lat": 17.4437, "gps_lng": 78.4482},
+    {"name": "North Hub — Jeedimetla", "type": "WAREHOUSE", "gps_lat": 17.5197, "gps_lng": 78.4469},
+    {"name": "South Hub — Shamshabad", "type": "WAREHOUSE", "gps_lat": 17.2572, "gps_lng": 78.3451},
+    {"name": "West Hub — Patancheru", "type": "WAREHOUSE", "gps_lat": 17.5286, "gps_lng": 78.2674},
+    {"name": "East Hub — Cherlapally", "type": "WAREHOUSE", "gps_lat": 17.4687, "gps_lng": 78.6025},
+    {"name": "Center Hub — Balanagar", "type": "SORTING_CENTER", "gps_lat": 17.4768, "gps_lng": 78.4220},
 ]
 
-# pincode -> hub name (resolved to hub_id after hubs are inserted)
+# pincode -> hub name. Real Hyderabad pincodes, each live-verified via
+# Nominatim to actually sit in that hub's geographic zone.
 PINCODE_ROUTES = {
-    "500032": "Gachibowli Sorting Center",
-    "500019": "Gachibowli Sorting Center",
-    "500081": "Hitec City Warehouse",
-    "500084": "Hitec City Warehouse",
-    "500016": "Begumpet Hub",
-    "500003": "Begumpet Hub",
+    "500055": "North Hub — Jeedimetla",
+    "500067": "North Hub — Jeedimetla",
+    "501401": "North Hub — Jeedimetla",
+    "501218": "South Hub — Shamshabad",
+    "500052": "South Hub — Shamshabad",
+    "500075": "South Hub — Shamshabad",
+    "502319": "West Hub — Patancheru",
+    "502032": "West Hub — Patancheru",
+    "502300": "West Hub — Patancheru",
+    "500098": "East Hub — Cherlapally",
+    "500060": "East Hub — Cherlapally",
+    "500074": "East Hub — Cherlapally",
+    "500018": "Center Hub — Balanagar",
+    "500037": "Center Hub — Balanagar",
+    "500042": "Center Hub — Balanagar",
+    "500016": "Center Hub — Balanagar",
+    "500003": "Center Hub — Balanagar",
+    "500019": "Center Hub — Balanagar",
+    "500032": "Center Hub — Balanagar",
+    "500081": "Center Hub — Balanagar",
+    "500084": "Center Hub — Balanagar",
 }
 
-# phone -> (name, role, hub name or None)
-STAFF = [
-    ("+911000000001", "Anita Rao — Super Admin", "SUPER_ADMIN", None),
-    ("+911000000002", "Vikram Shah — Hub Manager", "HUB_MANAGER", "Gachibowli Sorting Center"),
-    ("+911000000003", "Farhan Ali — QR Paster", "QR_PASTER", "Gachibowli Sorting Center"),
-    ("+911000000004", "Meera Iyer — Bill Scanner", "BILL_SCANNER", "Gachibowli Sorting Center"),
-    ("+911000000005", "Arjun Reddy — Consolidator", "CONSOLIDATOR", "Gachibowli Sorting Center"),
-    ("+911000000006", "Sunita Devi — Line-Haul Driver", "LINE_HAUL", "Gachibowli Sorting Center"),
-    ("+911000000007", "Ravi Teja — Last-Mile Agent", "LAST_MILE", "Hitec City Warehouse"),
+# Real per-hub staffing model: 1 Hub Manager, 1 QR Paster, 1 Bill Scanner,
+# 1 Consolidator, 2 Truck Drivers, 5 Delivery Agents = 11 per hub, 55 total
+# across the 5 hubs. Phone numbers use a readable +9190001-<hub><role><seq>
+# scheme so a phone number alone tells you exactly who someone is.
+ROLE_LABEL = {
+    "HUB_MANAGER": "Hub Manager",
+    "QR_PASTER": "QR Paster",
+    "BILL_SCANNER": "Bill Scanner",
+    "CONSOLIDATOR": "Consolidator",
+    "LINE_HAUL": "Truck Driver",
+    "LAST_MILE": "Delivery Agent",
+}
+ROLE_CODE = {"HUB_MANAGER": "01", "QR_PASTER": "02", "BILL_SCANNER": "03", "CONSOLIDATOR": "04", "LINE_HAUL": "05", "LAST_MILE": "06"}
+FULL_ROSTER = [("HUB_MANAGER", 1), ("QR_PASTER", 1), ("BILL_SCANNER", 1), ("CONSOLIDATOR", 1), ("LINE_HAUL", 2), ("LAST_MILE", 5)]
+HUB_CODE = {
+    "North Hub — Jeedimetla": "01",
+    "South Hub — Shamshabad": "02",
+    "West Hub — Patancheru": "03",
+    "East Hub — Cherlapally": "04",
+    "Center Hub — Balanagar": "05",
+}
+
+_FIRST_NAMES = [
+    "Srinivas", "Ramesh", "Suresh", "Prasad", "Naveen", "Kiran", "Praveen", "Manoj", "Rajesh", "Anil",
+    "Vijay", "Sandeep", "Ashok", "Ravi", "Krishna", "Mahesh", "Ganesh", "Chandra Sekhar", "Bhaskar", "Venkatesh",
+    "Satish", "Prakash", "Ramana", "Yadagiri", "Shiva Kumar", "Naresh", "Vinay", "Karthik", "Arjun", "Nagaraju",
+    "Lakshmi", "Padma", "Swathi", "Priya", "Divya", "Sravani", "Anitha", "Kavitha", "Radha", "Meena",
+    "Jyothi", "Vani", "Sudha", "Uma", "Latha", "Rani", "Sushma", "Pallavi", "Deepika", "Saritha",
+    "Ramulu", "Yadamma", "Chinna",
 ]
+_LAST_NAMES = ["Reddy", "Rao", "Naidu", "Goud", "Kumar", "Sharma", "Varma", "Chowdary", "Yadav", "Naik"]
+
+
+def _build_staff_roster() -> list[tuple[str, str, str, str]]:
+    """Generates the 55-person roster (phone, name, role, hub name) from
+    FULL_ROSTER, applied identically to all 5 hubs."""
+    roster = [("+911000000001", "Anita Rao — Super Admin", "SUPER_ADMIN", None)]
+    name_i = 0
+    for hub_name, hub_code in HUB_CODE.items():
+        for role, count in FULL_ROSTER:
+            for seq in range(1, count + 1):
+                first = _FIRST_NAMES[name_i % len(_FIRST_NAMES)]
+                last = _LAST_NAMES[(name_i // len(_FIRST_NAMES)) % len(_LAST_NAMES)]
+                name_i += 1
+                phone = f"+919000{hub_code}{ROLE_CODE[role]}{seq:02d}"
+                name = f"{first} {last} — {ROLE_LABEL[role]} ({hub_name.split('—')[0].strip()})"
+                roster.append((phone, name, role, hub_name))
+    return roster
+
+
+STAFF = _build_staff_roster()
 
 
 def upsert_hubs(admin) -> dict[str, str]:
@@ -107,7 +169,7 @@ def main() -> None:
     name_to_id = upsert_hubs(admin)
     upsert_pincode_routes(admin, name_to_id)
     upsert_staff(admin, name_to_id)
-    log.info("Seed complete. Demo login: any phone above + OTP code from DEMO_OTP_BYPASS_CODE in .env")
+    log.info("Seed complete: 5 hubs, %d pincode routes, %d staff. Demo login: any phone above + OTP code from DEMO_OTP_BYPASS_CODE in .env", len(PINCODE_ROUTES), len(STAFF))
 
 
 if __name__ == "__main__":
