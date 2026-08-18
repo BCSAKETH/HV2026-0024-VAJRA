@@ -69,6 +69,8 @@ export interface ManifestStop {
 export interface Manifest {
   stops: ManifestStop[];
   total_packages: number;
+  total_distance_km: number | null;
+  total_duration_minutes: number | null;
 }
 
 export class ApiError extends Error {

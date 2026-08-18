@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.bags import bag_out, get_bag_or_404
 from app.core.config import get_settings
+from app.core.osrm import get_route
 from app.core.routing import group_multidrop, nearest_neighbor_route
 from app.core.security import require_roles
 from app.core.supabase_client import fetch_one, get_admin_client
-from app.core.twilio_whatsapp import send_out_for_delivery
+from app.core.fast2sms import send_out_for_delivery
 from app.core.velocity import haversine_km
 from app.models.phase2 import BagOut, ShipmentOut
 from app.models.phase4 import ClaimChildIn, ClaimChildOut, DeliverIn, ManifestOut, ManifestStop, ProceedToDeliverOut, RtoIn, UnsealIn
@@ -171,7 +172,7 @@ async def proceed_to_deliver(staff: Annotated[dict, Depends(require_roles(*_ROLE
 
 
 @router.get("/agent/manifest", response_model=ManifestOut)
-def get_manifest(
+async def get_manifest(
     staff: Annotated[dict, Depends(require_roles(*_ROLES))],
     lat: Annotated[float | None, Query()] = None,
     lng: Annotated[float | None, Query()] = None,
@@ -190,7 +191,27 @@ def get_manifest(
         ManifestStop(sequence=i + 1, lat=g["lat"], lng=g["lng"], needs_manual_location=g["lat"] is None, shipments=[ShipmentOut(**s) for s in g["shipments"]])
         for i, g in enumerate(ordered)
     ]
-    return ManifestOut(stops=stops, total_packages=len(shipments))
+
+    # Real driving distance/ETA for the whole run, in the order above — the
+    # TSP ordering itself stays haversine-based (see routing.py), this just
+    # measures the already-decided route against actual roads. Only
+    # possible with a GPS start point and at least one routable stop.
+    total_distance_km: float | None = None
+    total_duration_minutes: float | None = None
+    if lat is not None and lng is not None:
+        waypoints = [(lat, lng)] + [(g["lat"], g["lng"]) for g in ordered if g["lat"] is not None]
+        if len(waypoints) >= 2:
+            route = await get_route(waypoints)
+            if route:
+                total_distance_km = round(route["distance_m"] / 1000, 1)
+                total_duration_minutes = round(route["duration_s"] / 60, 1)
+
+    return ManifestOut(
+        stops=stops,
+        total_packages=len(shipments),
+        total_distance_km=total_distance_km,
+        total_duration_minutes=total_duration_minutes,
+    )
 
 
 @router.post("/shipments/{tracking_id}/deliver", response_model=ShipmentOut)

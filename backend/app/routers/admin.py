@@ -132,10 +132,10 @@ def get_active_transits(staff: Annotated[dict, Depends(require_roles(*_ROLES))],
 
 
 @router.get("/bottlenecks", response_model=list[BottleneckOut])
-def get_bottlenecks(staff: Annotated[dict, Depends(require_roles(*_ROLES))], preview_hub_id: Annotated[str | None, Query()] = None) -> list[BottleneckOut]:
+async def get_bottlenecks(staff: Annotated[dict, Depends(require_roles(*_ROLES))], preview_hub_id: Annotated[str | None, Query()] = None) -> list[BottleneckOut]:
     """The 'AI Bottleneck Auditor' — see app/core/bottleneck_scanner.py."""
     hub_id = resolve_scope_hub_id(staff, preview_hub_id)
-    results = compute_bottlenecks()
+    results = await compute_bottlenecks()
     if hub_id:
         results = [b for b in results if b.origin_hub.id == hub_id or b.destination_hub.id == hub_id]
     return results

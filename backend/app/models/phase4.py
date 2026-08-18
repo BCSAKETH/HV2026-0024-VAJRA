@@ -37,6 +37,12 @@ class ManifestStop(BaseModel):
 class ManifestOut(BaseModel):
     stops: list[ManifestStop]
     total_packages: int
+    # Real road-network total for the run, via OSRM, in the same
+    # already-TSP-sorted stop order returned above. None when there's no
+    # GPS start point, fewer than 2 routable stops, or OSRM couldn't be
+    # reached — the manifest itself never depends on this being present.
+    total_distance_km: float | None = None
+    total_duration_minutes: float | None = None
 
 
 class DeliverIn(BaseModel):

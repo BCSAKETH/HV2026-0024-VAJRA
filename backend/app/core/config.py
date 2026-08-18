@@ -19,10 +19,25 @@ class Settings(BaseSettings):
     # Hackathon demo bypass — set to "" in a real deployment to disable it
     DEMO_OTP_BYPASS_CODE: str = ""
 
-    # Twilio — consumer notifications only, never staff OTP
+    # Twilio — consumer notifications only, never staff OTP.
+    # Auth accepts either pair: TWILIO_AUTH_TOKEN (the account's master
+    # secret) OR an API Key SID/Secret (scoped, revocable without rotating
+    # the account's own token — twilio.com/console -> Account -> API keys &
+    # tokens). If both are set, the API Key pair wins. Either way,
+    # TWILIO_ACCOUNT_SID is still required: it's the account the request
+    # authenticates against, not a credential itself.
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_API_KEY_SID: str = ""
+    TWILIO_API_KEY_SECRET: str = ""
     TWILIO_WHATSAPP_FROM: str = ""
+
+    # Fast2SMS — the active consumer-SMS provider (see app/core/fast2sms.py).
+    # "q" (Quick SMS) is the only route that accepts arbitrary custom text
+    # without DLT template registration, but it's gated behind a real ₹100+
+    # wallet top-up regardless of trial status — confirmed live, not
+    # documented anywhere. Every send is best-effort until that's cleared.
+    FAST2SMS_API_KEY: str = ""
 
     # Mistral Vision OCR (switched from Groq — Groq has zero working vision
     # models as of this build, confirmed via a live API call; see README)
@@ -32,6 +47,12 @@ class Settings(BaseSettings):
     # Nominatim geocoding
     NOMINATIM_BASE_URL: str = "https://nominatim.openstreetmap.org"
     NOMINATIM_USER_AGENT: str = "locus-logistics-app"
+
+    # OSRM road-network routing/directions — public demo instance, no key
+    # needed. It's rate-limited and "not for production" per its own docs,
+    # so every caller treats a miss as best-effort and falls back to the
+    # straight-line haversine estimate, never blocks on it.
+    OSRM_BASE_URL: str = "https://router.project-osrm.org"
 
     ENV: str = "development"
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8081"

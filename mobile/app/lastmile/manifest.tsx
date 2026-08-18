@@ -63,6 +63,11 @@ export default function ManifestScreen() {
         <Text className="text-2xl text-navy" style={{ fontFamily: "serif" }}>
           {manifest.total_packages} package{manifest.total_packages === 1 ? "" : "s"} · {manifest.stops.length} stop{manifest.stops.length === 1 ? "" : "s"}
         </Text>
+        {manifest.total_distance_km != null && manifest.total_duration_minutes != null ? (
+          <Text className="mt-1 text-navy/50">
+            ~{manifest.total_distance_km} km · ~{Math.round(manifest.total_duration_minutes)} min by road
+          </Text>
+        ) : null}
       </View>
 
       <View className="p-5">

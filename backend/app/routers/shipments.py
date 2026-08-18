@@ -7,7 +7,7 @@ from app.core.geocode import geocode_address
 from app.core.security import get_current_staff, require_roles
 from app.core.storage import upload_condition_photo
 from app.core.supabase_client import fetch_one, get_admin_client
-from app.core.twilio_whatsapp import send_intake_receipt
+from app.core.fast2sms import send_intake_receipt
 from app.models.phase2 import ConditionPhotosOut, IntakeConfirmIn, MsmeOut, ShipmentOut
 
 router = APIRouter(tags=["shipments"])
