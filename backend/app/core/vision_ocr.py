@@ -72,7 +72,18 @@ async def extract_bill_fields(image_bytes: bytes, mime_type: str = "image/jpeg")
     body = resp.json()
     try:
         content = body["choices"][0]["message"]["content"]
-        return json.loads(content)
+        fields = json.loads(content)
     except (KeyError, IndexError, json.JSONDecodeError) as exc:
         logger.warning("Could not parse Mistral OCR response: %s", body)
         raise VisionOcrError("Mistral returned a response that wasn't valid JSON") from exc
+
+    # A 200 with every field null is a silent failure from the caller's
+    # point of view (mobile shows "couldn't read the bill" with nothing to
+    # go on) but wasn't logged anywhere until now -- there was genuinely no
+    # trace to diagnose it from, live or in hindsight. This doesn't fix a
+    # hard-to-read photo, it just means the next one leaves a record.
+    non_null = sum(1 for v in fields.values() if v not in (None, ""))
+    if non_null == 0:
+        logger.warning("Mistral OCR returned an all-null extraction (image_bytes=%d, mime=%s) -- likely an unreadable/blank photo", len(image_bytes), mime_type)
+
+    return fields

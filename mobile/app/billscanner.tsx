@@ -50,6 +50,14 @@ export default function IntakeScreen() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [conditionPhotos, setConditionPhotos] = useState<CapturedPhoto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Tracks whether the intake call has already succeeded for this
+  // trackingId — confirmIntake and the (much larger, much slower) photo
+  // upload were sharing one try/catch, so a slow/failed photo upload after
+  // a successful intake showed "Could not confirm intake" and a retry
+  // re-ran BOTH calls, including the one that had already gone through.
+  // Confirmed live: this produced 4 duplicate INTAKE events and 4
+  // duplicate SMS to the same customer from one flaky submission.
+  const [intakeConfirmed, setIntakeConfirmed] = useState(false);
 
   const [activityStats, setActivityStats] = useState<StaffActivity["stats"] | null>(null);
 
@@ -63,6 +71,7 @@ export default function IntakeScreen() {
     setForm(EMPTY_FORM);
     setConditionPhotos([]);
     setError(null);
+    setIntakeConfirmed(false);
   }
 
   async function handleScan(rawCode: string) {
@@ -124,29 +133,51 @@ export default function IntakeScreen() {
       // location is nice to have
     }
 
-    try {
-      await api.confirmIntake(trackingId, {
-        recipient_name: form.recipient_name || null,
-        recipient_phone: form.recipient_phone || null,
-        delivery_address: form.delivery_address || null,
-        delivery_pincode: form.delivery_pincode || null,
-        weight_grams: form.weight_grams ? Number(form.weight_grams) : null,
-        declared_value: form.declared_value ? Number(form.declared_value) : null,
-        msme_phone: form.msme_phone || null,
-        msme_business_name: form.msme_business_name || null,
-        staff_lat: staffLat,
-        staff_lng: staffLng,
-      });
-
-      if (conditionPhotos.length > 0) {
-        await api.uploadConditionPhotos(trackingId, conditionPhotos);
+    // Only call confirmIntake if it hasn't already succeeded for this
+    // trackingId — a retry after a later step (photo upload) fails must not
+    // re-submit an already-confirmed intake. The backend now also refuses
+    // to re-notify/re-log on a duplicate call either way, but the client
+    // shouldn't be relying on that as its only safety net.
+    if (!intakeConfirmed) {
+      try {
+        await api.confirmIntake(trackingId, {
+          recipient_name: form.recipient_name || null,
+          recipient_phone: form.recipient_phone || null,
+          delivery_address: form.delivery_address || null,
+          delivery_pincode: form.delivery_pincode || null,
+          weight_grams: form.weight_grams ? Number(form.weight_grams) : null,
+          declared_value: form.declared_value ? Number(form.declared_value) : null,
+          msme_phone: form.msme_phone || null,
+          msme_business_name: form.msme_business_name || null,
+          staff_lat: staffLat,
+          staff_lng: staffLng,
+        });
+        setIntakeConfirmed(true);
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : "Could not confirm intake. Check your connection and try again.");
+        setStep("condition_photos");
+        return;
       }
-
-      setStep("done");
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not confirm intake. Check your connection and try again.");
-      setStep("condition_photos");
     }
+
+    if (conditionPhotos.length > 0) {
+      try {
+        await api.uploadConditionPhotos(trackingId, conditionPhotos);
+      } catch (e) {
+        // Intake is already confirmed and the customer's SMS has already
+        // gone out at this point — say so plainly, so "try again" here
+        // only ever retries the photo upload, not the whole flow.
+        setError(
+          e instanceof ApiError
+            ? `Intake was confirmed, but the photos failed to upload: ${e.message}. Tap Confirm again to retry just the photos.`
+            : "Intake was confirmed, but the photos failed to upload — check your connection and tap Confirm again to retry just the photos."
+        );
+        setStep("condition_photos");
+        return;
+      }
+    }
+
+    setStep("done");
   }
 
   return (
