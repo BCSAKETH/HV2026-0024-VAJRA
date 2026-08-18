@@ -1,11 +1,23 @@
+import { StatCounter } from "@/components/ui/StatCounter";
 import type { KpiOut } from "@/lib/api";
 
-function KpiCard({ label, value, accent }: { label: string; value: string; accent?: "sage" | "brick" }) {
-  const valueColor = accent === "sage" ? "text-sage" : accent === "brick" ? "text-brick" : "text-navy";
+function KpiCard({
+  label,
+  value,
+  suffix,
+  decimals,
+  accent,
+}: {
+  label: string;
+  value: number;
+  suffix?: string;
+  decimals?: number;
+  accent?: "sage" | "brick";
+}) {
+  const valueColor = accent === "sage" ? "[&_.stat-value]:text-sage" : accent === "brick" ? "[&_.stat-value]:text-brick" : "";
   return (
-    <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-      <p className="mb-2 text-sm font-medium uppercase tracking-wide text-navy/50">{label}</p>
-      <p className={`font-mono text-4xl ${valueColor}`}>{value}</p>
+    <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card transition hover:-translate-y-0.5 hover:shadow-lg">
+      <StatCounter value={value} suffix={suffix} decimals={decimals} label={label} className={valueColor} labelFirst />
     </div>
   );
 }
@@ -25,9 +37,9 @@ export function KpiCards({ kpis }: { kpis: KpiOut | null }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <KpiCard label="Total Active Orders" value={kpis.total_active_orders.toLocaleString()} />
-      <KpiCard label="Average TAT" value={kpis.average_tat_hours !== null ? `${kpis.average_tat_hours}h` : "—"} />
-      <KpiCard label="Network Integrity Index" value={`${kpis.network_integrity_index}%`} accent={integrityAccent} />
+      <KpiCard label="Total Active Orders" value={kpis.total_active_orders} />
+      <KpiCard label="Average TAT" value={kpis.average_tat_hours ?? 0} suffix={kpis.average_tat_hours !== null ? "h" : ""} decimals={1} />
+      <KpiCard label="Network Integrity Index" value={kpis.network_integrity_index} suffix="%" decimals={1} accent={integrityAccent} />
     </div>
   );
 }

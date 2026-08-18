@@ -12,6 +12,8 @@ const config: Config = {
         orange: "#E76F2F", // active scans / warehouse actions (burnt orange)
         sage: "#6B8F71", // successful confirmations (muted sage)
         brick: "#B84A3A", // errors, exceptions, quarantines
+        "ivory-2": "#FBFAF7", // elevated surface
+        "ivory-3": "#F1ECE2", // recessed surface (inputs, code)
       },
       fontFamily: {
         serif: ["var(--font-newsreader)", "Georgia", "serif"],

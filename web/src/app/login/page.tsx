@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { PackageBoxScene } from "@/components/3d/PackageBoxScene";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { ApiError, api } from "@/lib/api";
 import { destinationForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/lib/store/auth";
@@ -51,14 +53,19 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-ivory px-6">
-      <h1 className="mb-1 font-serif text-4xl text-navy">LOCUS</h1>
-      <p className="mb-10 text-navy/60">Staff sign in</p>
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ivory px-6">
+      <div className="pointer-events-none absolute inset-0 opacity-60">
+        <PackageBoxScene variant="idle" accentColor="#4F46E5" />
+      </div>
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-ivory/30 via-transparent to-ivory/60" />
 
-      <form
-        onSubmit={step === "phone" ? requestOtp : verifyOtp}
-        className="w-full max-w-sm rounded-card border border-navy/10 bg-white p-6 shadow-card"
-      >
+      <a href="/" className="relative z-10 mb-1 font-serif text-4xl text-navy">
+        LOCUS
+      </a>
+      <p className="relative z-10 mb-10 text-navy/60">Staff sign in</p>
+
+      <form onSubmit={step === "phone" ? requestOtp : verifyOtp} className="relative z-10 w-full max-w-sm">
+      <GlassCard className="p-6">
         {step === "phone" ? (
           <>
             <label className="mb-2 block text-sm font-medium text-navy">Staff phone number</label>
@@ -103,6 +110,7 @@ function LoginForm() {
         )}
 
         {error ? <p className="mt-4 text-center text-sm text-brick">{error}</p> : null}
+      </GlassCard>
       </form>
     </main>
   );
