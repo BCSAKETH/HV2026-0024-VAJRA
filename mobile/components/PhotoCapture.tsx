@@ -43,15 +43,13 @@ export function PhotoCapture({ onCaptured, hint }: Props) {
       photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: true });
       if (!photo) return;
 
-      // Resize (not just compress) before it ever gets near the network --
-      // see MAX_DIMENSION comment above for why quality alone wasn't enough.
-      // manipulateAsync is deprecated as of this SDK (v57, per mobile/AGENTS.md)
-      // -- manipulate()'s chainable context API is the current replacement.
-      const context = ImageManipulator.manipulate(photo.uri);
-      const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0);
-      context.resize(isLandscape ? { width: MAX_DIMENSION, height: null } : { width: null, height: MAX_DIMENSION });
-      const rendered = await context.renderAsync();
-      const resized = await rendered.saveAsync({ format: ImageManipulator.SaveFormat.JPEG, compress: 0.4, base64: true });
+      const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0) && (photo.width ?? 0) > 0;
+      const resizeAction = isLandscape ? { resize: { width: MAX_DIMENSION } } : { resize: { width: MAX_DIMENSION } };
+      const resized = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [resizeAction],
+        { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
 
       setPreview({ uri: resized.uri, base64: resized.base64 ?? photo.base64, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
     } catch {
