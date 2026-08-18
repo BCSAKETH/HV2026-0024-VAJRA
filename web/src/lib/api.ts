@@ -133,6 +133,31 @@ export interface RoutingGap {
   shipment_count: number;
 }
 
+export interface MsmeSummary {
+  id: string;
+  business_name: string;
+  owner_name: string | null;
+  phone: string;
+  pincode: string | null;
+  shipment_count: number;
+  first_shipped_at: string | null;
+  created_at: string;
+}
+
+export interface MsmeDetail {
+  id: string;
+  business_name: string;
+  owner_name: string | null;
+  phone: string;
+  pincode: string | null;
+  created_at: string;
+  total_shipments: number;
+  total_value: number;
+  delivered_count: number;
+  rto_count: number;
+  shipments: Shipment[];
+}
+
 export interface AnalyticsOut {
   scope_type: "NETWORK" | "HUB";
   scope_hub_name: string | null;
@@ -307,4 +332,9 @@ export const api = {
     request<StaffNotification>(`/admin/staff/${encodeURIComponent(staffId)}/notify`, { method: "POST", body: JSON.stringify(payload) }, accessToken),
 
   getAnalytics: (accessToken: string, previewHubId?: string | null) => request<AnalyticsOut>(withPreview("/admin/analytics", previewHubId), undefined, accessToken),
+
+  listMsmes: (accessToken: string, previewHubId?: string | null) => request<MsmeSummary[]>(withPreview("/admin/msmes", previewHubId), undefined, accessToken),
+
+  getMsmeDetail: (accessToken: string, msmeId: string, previewHubId?: string | null) =>
+    request<MsmeDetail>(withPreview(`/admin/msmes/${encodeURIComponent(msmeId)}`, previewHubId), undefined, accessToken),
 };

@@ -8,6 +8,7 @@ const TABS = [
   { href: "/dashboard/analytics", label: "Analytics" },
   { href: "/dashboard/staff", label: "Staff" },
   { href: "/dashboard/network", label: "Network" },
+  { href: "/dashboard/msmes", label: "MSMEs" },
 ];
 
 export function TabNav() {
