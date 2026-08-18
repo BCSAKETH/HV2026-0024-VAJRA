@@ -60,6 +60,14 @@ def _arrive_bag(admin, bag: dict, staff_id: str, lat: float | None, lng: float |
         required = min(MIN_SOFT_AUDIT_ITEMS, len(child_ids))
         proven = {t for t in soft_audit_ids if t in child_ids}
         if len(proven) < required:
+            admin.table("tracking_events").insert(
+                {
+                    "bag_id": bag["bag_id"],
+                    "event_type": "DEFENSE_BLOCKED",
+                    "staff_id": staff_id,
+                    "meta": {"defense": "SOFT_AUDIT", "required": required, "proven": len(proven)},
+                }
+            ).execute()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={

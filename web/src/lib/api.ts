@@ -87,6 +87,63 @@ export interface StaffNotification {
   read_at: string | null;
 }
 
+export interface DefenseMetric {
+  number: number;
+  name: string;
+  count: number;
+  note: string | null;
+}
+
+export interface ThroughputStats {
+  intake_count: number;
+  delivered_count: number;
+  rto_count: number;
+  rto_rate_pct: number;
+  bags_awaiting_pickup: number;
+  avg_dwell_hours: number | null;
+}
+
+export interface StaffLeaderboardEntry {
+  id: string;
+  name: string | null;
+  phone: string;
+  role: string;
+  error_points: number;
+}
+
+export interface ValueRiskStats {
+  total_declared_value: number;
+  value_in_transit: number;
+  high_value_undelivered_count: number;
+}
+
+export interface MsmeStatEntry {
+  id: string;
+  business_name: string;
+  shipment_count: number;
+}
+
+export interface MsmeStats {
+  total_msmes: number;
+  top_by_volume: MsmeStatEntry[];
+}
+
+export interface RoutingGap {
+  pincode: string;
+  shipment_count: number;
+}
+
+export interface AnalyticsOut {
+  scope_type: "NETWORK" | "HUB";
+  scope_hub_name: string | null;
+  defenses: DefenseMetric[];
+  throughput: ThroughputStats;
+  staff_leaderboard: StaffLeaderboardEntry[];
+  value_risk: ValueRiskStats;
+  msme_stats: MsmeStats;
+  routing_gaps: RoutingGap[];
+}
+
 export const HUB_MANAGER_CREATABLE_ROLES: StaffRole[] = ["QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"];
 export const ALL_STAFF_ROLES: StaffRole[] = ["SUPER_ADMIN", "HUB_MANAGER", "QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"];
 
@@ -248,4 +305,6 @@ export const api = {
 
   notifyStaff: (accessToken: string, staffId: string, payload: { message: string; bag_id?: string | null; tracking_id?: string | null }) =>
     request<StaffNotification>(`/admin/staff/${encodeURIComponent(staffId)}/notify`, { method: "POST", body: JSON.stringify(payload) }, accessToken),
+
+  getAnalytics: (accessToken: string, previewHubId?: string | null) => request<AnalyticsOut>(withPreview("/admin/analytics", previewHubId), undefined, accessToken),
 };

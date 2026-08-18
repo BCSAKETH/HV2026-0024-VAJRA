@@ -4,7 +4,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.routers import admin, auth, consolidation, driver_link, hubs, lastmile, linehaul, ocr, printer, resolve, shipments, track
+from app.routers import admin, analytics, auth, consolidation, driver_link, hubs, lastmile, linehaul, ocr, printer, resolve, shipments, track
 
 logger = logging.getLogger("locus.main")
 
@@ -57,6 +57,7 @@ api.include_router(admin.router)
 api.include_router(track.router)
 api.include_router(driver_link.router)
 api.include_router(driver_link.notifications_router)
+api.include_router(analytics.router)
 app.include_router(api)
 
 

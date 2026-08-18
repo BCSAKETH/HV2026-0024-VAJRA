@@ -33,7 +33,7 @@ def _fetch_shipment_or_404(admin, tracking_id: str) -> dict:
     return result
 
 
-def _check_geofence(shipment: dict, lat: float | None, lng: float | None) -> None:
+def _check_geofence(admin, staff_id: str, shipment: dict, lat: float | None, lng: float | None) -> None:
     """Defense 9's server-side enforcement — the mobile UI locks the OTP
     field client-side too, but that's UX, not security. A package with no
     geocoded address can't be checked at all, so it's allowed through (the
@@ -42,6 +42,16 @@ def _check_geofence(shipment: dict, lat: float | None, lng: float | None) -> Non
         return
     distance_m = haversine_km(shipment["delivery_lat"], shipment["delivery_lng"], lat, lng) * 1000
     if distance_m > GEOFENCE_METERS:
+        admin.table("tracking_events").insert(
+            {
+                "tracking_id": shipment["tracking_id"],
+                "event_type": "DEFENSE_BLOCKED",
+                "staff_id": staff_id,
+                "lat": lat,
+                "lng": lng,
+                "meta": {"defense": "GEOFENCE", "distance_m": round(distance_m)},
+            }
+        ).execute()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -221,7 +231,7 @@ def deliver_shipment(tracking_id: str, payload: DeliverIn, staff: Annotated[dict
     if shipment["status"] != "OUT_FOR_DELIVERY" or shipment.get("assigned_staff_id") != staff["id"]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"'{tracking_id}' isn't in your active manifest.")
 
-    _check_geofence(shipment, payload.staff_lat, payload.staff_lng)  # Defense 9
+    _check_geofence(admin, staff["id"], shipment, payload.staff_lat, payload.staff_lng)  # Defense 9
 
     if payload.otp != shipment.get("delivery_otp"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect delivery OTP.")
@@ -246,7 +256,7 @@ def rto_shipment(tracking_id: str, payload: RtoIn, staff: Annotated[dict, Depend
     if shipment["status"] != "OUT_FOR_DELIVERY" or shipment.get("assigned_staff_id") != staff["id"]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"'{tracking_id}' isn't in your active manifest.")
 
-    _check_geofence(shipment, payload.staff_lat, payload.staff_lng)  # same geofence gate as delivery
+    _check_geofence(admin, staff["id"], shipment, payload.staff_lat, payload.staff_lng)  # same geofence gate as delivery
 
     updated = admin.table("shipments").update({"status": "RTO"}).eq("tracking_id", tracking_id).execute().data[0]
     admin.table("tracking_events").insert(

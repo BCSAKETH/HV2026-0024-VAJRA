@@ -108,6 +108,15 @@ def scan_child(
             detail={"code": "PINCODE_NOT_ROUTED", "message": f"No hub route is configured for pincode {shipment.get('delivery_pincode')}."},
         )
     if route["destination_hub_id"] != bag["destination_hub_id"]:
+        admin.table("tracking_events").insert(
+            {
+                "tracking_id": payload.tracking_id,
+                "bag_id": bag_id,
+                "event_type": "DEFENSE_BLOCKED",
+                "staff_id": staff["id"],
+                "meta": {"defense": "PINCODE_COLLISION", "pincode": shipment.get("delivery_pincode"), "attempted_bag_destination_hub_id": bag["destination_hub_id"]},
+            }
+        ).execute()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -120,6 +129,15 @@ def scan_child(
     declared_value = shipment.get("declared_value") or 0
     tamper_seal_id = payload.tamper_seal_id or shipment.get("tamper_seal_id")
     if declared_value > HIGH_VALUE_THRESHOLD and not tamper_seal_id:
+        admin.table("tracking_events").insert(
+            {
+                "tracking_id": payload.tracking_id,
+                "bag_id": bag_id,
+                "event_type": "DEFENSE_BLOCKED",
+                "staff_id": staff["id"],
+                "meta": {"defense": "TAMPER_SEAL", "declared_value": declared_value},
+            }
+        ).execute()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -175,6 +193,14 @@ def dispatch_bag(
 
     # --- Defense 3: Ghost Packages — Dynamic Tolerance Engine ---
     if not within:
+        admin.table("tracking_events").insert(
+            {
+                "bag_id": bag_id,
+                "event_type": "DEFENSE_BLOCKED",
+                "staff_id": staff["id"],
+                "meta": {"defense": "WEIGHT_TOLERANCE", "expected_weight": expected, "actual_weight": actual, "diff_pct": round(diff_pct, 2)},
+            }
+        ).execute()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
