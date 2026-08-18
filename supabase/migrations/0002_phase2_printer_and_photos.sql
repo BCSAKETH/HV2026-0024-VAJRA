@@ -30,4 +30,6 @@ $$;
 grant execute on function public.next_tracking_id() to service_role, authenticated;
 grant execute on function public.next_bag_id() to service_role, authenticated;
 
-update storage.buckets set public = true where id = 'package_conditions';
+insert into storage.buckets (id, name, public)
+values ('package_conditions', 'package_conditions', true)
+on conflict (id) do update set public = true;
