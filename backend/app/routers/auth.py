@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -58,6 +59,56 @@ def verify_otp(payload: VerifyOtpIn) -> VerifyOtpOut:
     return VerifyOtpOut(access_token=access_token, staff=StaffProfile(**staff))
 
 
-@router.get("/me", response_model=StaffProfile)
+@router.get("/me")
 def me(staff: Annotated[dict, Depends(get_current_staff)]) -> StaffProfile:
     return StaffProfile(**staff)
+
+
+@router.get("/me/activity")
+def me_activity(staff: Annotated[dict, Depends(get_current_staff)]) -> dict:
+    """Self-service activity feed — any authenticated staff member can call
+    this on themselves (unlike /admin/staff/{id}/manifest, which is
+    Hub-Manager/Super-Admin only). Backed by the real tracking_events
+    ledger, not a device-local store, so the numbers survive a reinstall
+    or a swap to a different phone -- same reasoning as Defense 10's
+    handover design."""
+    admin = get_admin_client()
+
+    events_res = (
+        admin.table("tracking_events")
+        .select("*")
+        .eq("staff_id", staff["id"])
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    events = events_res.data or []
+
+    # total_count must NOT be len(events) -- that list is capped at 50 for
+    # the feed display, so it would silently plateau at 50 forever for
+    # anyone with more history than that. Count separately, uncapped.
+    total_res = admin.table("tracking_events").select("id", count="exact").eq("staff_id", staff["id"]).execute()
+    total_count = total_res.count or 0
+
+    today_str = datetime.now(timezone.utc).date().isoformat()
+    today_res = (
+        admin.table("tracking_events")
+        .select("id", count="exact")
+        .eq("staff_id", staff["id"])
+        .gte("created_at", today_str)
+        .execute()
+    )
+    today_count = today_res.count or 0
+
+    staff_row = fetch_one(admin.table("staff").select("error_points").eq("id", staff["id"]).maybe_single())
+    error_points = staff_row.get("error_points", 0) if staff_row else staff.get("error_points", 0)
+
+    return {
+        "stats": {
+            "today_count": today_count,
+            "total_count": total_count,
+            "error_points": error_points,
+        },
+        "events": events,
+    }
+
