@@ -106,7 +106,11 @@ async def confirm_intake(
 
     if row.get("recipient_phone"):
         settings = get_settings()
-        tracking_url = f"{settings.PUBLIC_WEB_BASE_URL}/track/{tracking_id}"
+        # shortcode, not tracking_id -- the public /track/[id] page accepts
+        # either, but the sequential tracking_id (TRK-000017, ...) is
+        # trivially enumerable by incrementing the number in the URL. The
+        # shortcode is a cryptographically random 6-char code instead.
+        tracking_url = f"{settings.PUBLIC_WEB_BASE_URL}/track/{row['shortcode']}"
         await send_intake_receipt(row["recipient_phone"], tracking_id, tracking_url)
 
     return ShipmentOut(**row)

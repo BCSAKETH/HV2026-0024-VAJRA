@@ -6,17 +6,26 @@ from app.models.phase5 import TrackOut, TrackTimelineEvent
 router = APIRouter(prefix="/track", tags=["track"])
 
 
-@router.get("/{tracking_id}", response_model=TrackOut)
-def public_track(tracking_id: str) -> TrackOut:
+@router.get("/{code}", response_model=TrackOut)
+def public_track(code: str) -> TrackOut:
     """Public, unauthenticated — this is what powers /track/[id]. Deliberately
     hand-picks fields rather than returning the raw shipments row: no
     recipient_phone, no declared_value, no msme_id, no delivery_otp, no
     staff_id anywhere in the response. This is the ONLY way the public gets
-    shipment data — there is no anon RLS policy on `shipments` at all."""
+    shipment data — there is no anon RLS policy on `shipments` at all.
+
+    Looked up by `shortcode` first — a cryptographically random 6-char code
+    (32^6 ≈ 1.07B combinations), not enumerable by incrementing a number the
+    way the sequential tracking_id (TRK-000017, TRK-000018, ...) is. This is
+    what every new SMS/QR links with. `tracking_id` is still accepted as a
+    fallback purely so links already sent before this fix don't break."""
     admin = get_admin_client()
-    shipment = fetch_one(admin.table("shipments").select("*").eq("tracking_id", tracking_id).maybe_single())
+    shipment = fetch_one(admin.table("shipments").select("*").eq("shortcode", code.upper()).maybe_single())
+    if not shipment:
+        shipment = fetch_one(admin.table("shipments").select("*").eq("tracking_id", code).maybe_single())
     if not shipment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No shipment found for that tracking ID")
+    tracking_id = shipment["tracking_id"]
 
     own_events = admin.table("tracking_events").select("*").eq("tracking_id", tracking_id).execute().data
 
