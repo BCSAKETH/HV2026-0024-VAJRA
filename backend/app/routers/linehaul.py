@@ -32,6 +32,12 @@ def _depart_bag(admin, bag: dict, staff_id: str, lat: float | None, lng: float |
     admin.table("master_bags").update({"status": "IN_TRANSIT", "assigned_staff_id": staff_id, "dispatched_at": datetime.now(timezone.utc).isoformat()}).eq("bag_id", bag["bag_id"]).execute()
     admin.table("tracking_events").insert({"bag_id": bag["bag_id"], "event_type": "DEPARTED", "lat": lat, "lng": lng, "staff_id": staff_id}).execute()
 
+    # Package-level linking: every child in this bag is now physically with
+    # this driver, same as lastmile.py already does at unseal/claim time —
+    # previously only the bag itself got assigned_staff_id, not its
+    # contents, so a driver's manifest couldn't be queried package-by-package.
+    admin.table("shipments").update({"assigned_staff_id": staff_id}).eq("current_bag_id", bag["bag_id"]).execute()
+
     return get_bag_or_404(admin, bag["bag_id"])
 
 

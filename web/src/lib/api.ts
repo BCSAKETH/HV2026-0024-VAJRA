@@ -40,6 +40,53 @@ export interface Staff {
   created_at: string;
 }
 
+export interface Bag {
+  bag_id: string;
+  shortcode: string;
+  origin_hub_id: string | null;
+  destination_hub_id: string | null;
+  expected_weight: number;
+  actual_weight: number | null;
+  status: string;
+  child_count: number;
+}
+
+export interface Shipment {
+  tracking_id: string;
+  shortcode: string;
+  status: string;
+  status_confidence: string;
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  delivery_address: string | null;
+  delivery_pincode: string | null;
+  delivery_lat: number | null;
+  delivery_lng: number | null;
+  weight_grams: number | null;
+  declared_value: number | null;
+  tamper_seal_id: string | null;
+  condition_photo_urls: string[];
+  current_bag_id: string | null;
+  assigned_staff_id: string | null;
+  created_at: string;
+}
+
+export interface StaffManifest {
+  bags: Bag[];
+  shipments: Shipment[];
+}
+
+export interface StaffNotification {
+  id: string;
+  staff_id: string;
+  created_by: string | null;
+  message: string;
+  bag_id: string | null;
+  tracking_id: string | null;
+  created_at: string;
+  read_at: string | null;
+}
+
 export const HUB_MANAGER_CREATABLE_ROLES: StaffRole[] = ["QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"];
 export const ALL_STAFF_ROLES: StaffRole[] = ["SUPER_ADMIN", "HUB_MANAGER", "QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"];
 
@@ -195,4 +242,10 @@ export const api = {
 
   deletePincodeRoute: (accessToken: string, pincode: string) =>
     request<void>(`/admin/pincode-routes/${encodeURIComponent(pincode)}`, { method: "DELETE" }, accessToken),
+
+  getStaffManifest: (accessToken: string, staffId: string) =>
+    request<StaffManifest>(`/admin/staff/${encodeURIComponent(staffId)}/manifest`, undefined, accessToken),
+
+  notifyStaff: (accessToken: string, staffId: string, payload: { message: string; bag_id?: string | null; tracking_id?: string | null }) =>
+    request<StaffNotification>(`/admin/staff/${encodeURIComponent(staffId)}/notify`, { method: "POST", body: JSON.stringify(payload) }, accessToken),
 };

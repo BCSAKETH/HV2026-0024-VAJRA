@@ -3,7 +3,7 @@ import { useAuthStore } from "./store/auth";
 // Mobile is a separate app, not served from the Vercel domain — this needs
 // the full deployed URL (https://your-app.vercel.app/api) once shipped, set
 // via EXPO_PUBLIC_API_BASE_URL. Defaults to the local backend for dev.
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://locus-ecru.vercel.app/api";
 
 export type StaffRole = "SUPER_ADMIN" | "HUB_MANAGER" | "QR_PASTER" | "BILL_SCANNER" | "CONSOLIDATOR" | "LINE_HAUL" | "LAST_MILE";
 
@@ -71,6 +71,19 @@ export interface Manifest {
   total_packages: number;
   total_distance_km: number | null;
   total_duration_minutes: number | null;
+}
+
+// A Hub Manager "assigning" a driver is only ever this — a nudge, never a
+// real link. Only a physical scan sets assigned_staff_id.
+export interface StaffNotification {
+  id: string;
+  staff_id: string;
+  created_by: string | null;
+  message: string;
+  bag_id: string | null;
+  tracking_id: string | null;
+  created_at: string;
+  read_at: string | null;
 }
 
 export class ApiError extends Error {
@@ -229,6 +242,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ reason: reason ?? null, staff_lat: lat ?? null, staff_lng: lng ?? null }),
     }),
+
+  getMyNotifications: () => request<StaffNotification[]>("/notifications/mine"),
+
+  ackNotification: (id: string) => request<StaffNotification>(`/notifications/${id}/ack`, { method: "POST" }),
 
   syncBagEvents: (events: BagEvent[]) =>
     request<SyncResult[]>("/sync/bag-events", {
