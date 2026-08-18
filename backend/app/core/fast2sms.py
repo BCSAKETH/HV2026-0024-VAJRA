@@ -19,17 +19,15 @@ def _to_fast2sms_number(phone: str) -> str:
 
 
 async def send_sms(to_phone: str, body: str) -> bool:
-    """Best-effort send — never raises, matching the same contract the
-    Twilio WhatsApp sender had (see twilio_whatsapp.py, still in the
-    codebase but no longer called from the real send flows). A failure here
-    should never block the operational flow that triggered it.
+    """Best-effort send — never raises. A failure here should never block
+    the operational flow that triggered it.
 
     Uses route=q (Quick SMS) — the only Fast2SMS route that accepts
-    arbitrary custom text without DLT template registration. Confirmed live
-    that even this route is gated behind a real ₹100+ wallet top-up
-    regardless of account/trial status (not documented anywhere; found by
-    testing), so an unconfigured or not-yet-unlocked account degrades to a
-    logged no-op exactly like Twilio did before its credentials existed."""
+    arbitrary custom text without DLT template registration. That route is
+    gated behind a real ₹100+ wallet top-up regardless of account/trial
+    status (not documented anywhere; found by testing) until the wallet
+    clears it, so an unconfigured or not-yet-unlocked account degrades to a
+    logged no-op rather than raising."""
     settings = get_settings()
     if not settings.FAST2SMS_API_KEY:
         logger.info("Fast2SMS not configured — skipping SMS send to %s", to_phone)

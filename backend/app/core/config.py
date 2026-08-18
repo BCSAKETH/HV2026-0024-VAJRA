@@ -19,20 +19,7 @@ class Settings(BaseSettings):
     # Hackathon demo bypass — set to "" in a real deployment to disable it
     DEMO_OTP_BYPASS_CODE: str = ""
 
-    # Twilio — consumer notifications only, never staff OTP.
-    # Auth accepts either pair: TWILIO_AUTH_TOKEN (the account's master
-    # secret) OR an API Key SID/Secret (scoped, revocable without rotating
-    # the account's own token — twilio.com/console -> Account -> API keys &
-    # tokens). If both are set, the API Key pair wins. Either way,
-    # TWILIO_ACCOUNT_SID is still required: it's the account the request
-    # authenticates against, not a credential itself.
-    TWILIO_ACCOUNT_SID: str = ""
-    TWILIO_AUTH_TOKEN: str = ""
-    TWILIO_API_KEY_SID: str = ""
-    TWILIO_API_KEY_SECRET: str = ""
-    TWILIO_WHATSAPP_FROM: str = ""
-
-    # Fast2SMS — the active consumer-SMS provider (see app/core/fast2sms.py).
+    # Fast2SMS — the consumer-SMS provider (see app/core/fast2sms.py).
     # "q" (Quick SMS) is the only route that accepts arbitrary custom text
     # without DLT template registration, but it's gated behind a real ₹100+
     # wallet top-up regardless of trial status — confirmed live, not
