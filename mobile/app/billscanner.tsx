@@ -1,4 +1,3 @@
-import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,6 +9,7 @@ import { PhotoCapture, type CapturedPhoto } from "../components/PhotoCapture";
 import { ProfileModal } from "../components/ProfileModal";
 import { QrScanner } from "../components/QrScanner";
 import { ApiError, api, type StaffActivity } from "../lib/api";
+import { getCurrentLocationSafe } from "../lib/geo";
 import { useThemeStore } from "../lib/store/theme";
 
 type Step = "scan" | "bill_photo" | "ocr_loading" | "review" | "condition_photos" | "submitting" | "done";
@@ -120,18 +120,12 @@ export default function IntakeScreen() {
     setStep("submitting");
     setError(null);
 
-    let staffLat: number | undefined;
-    let staffLng: number | undefined;
-    try {
-      const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
-      if (permStatus === "granted") {
-        const pos = await Location.getCurrentPositionAsync({});
-        staffLat = pos.coords.latitude;
-        staffLng = pos.coords.longitude;
-      }
-    } catch {
-      // location is nice to have
-    }
+    // getCurrentLocationSafe has its own 5s timeout, so a weak GPS fix
+    // (indoors, poor sky view) can never block the actual intake network
+    // call from firing -- confirmed live this was mistaken for a network
+    // problem (0 KB/s, zero server trace) when the real cause was never
+    // getting past this step to attempt the network call at all.
+    const { lat: staffLat, lng: staffLng } = await getCurrentLocationSafe();
 
     // Only call confirmIntake if it hasn't already succeeded for this
     // trackingId — a retry after a later step (photo upload) fails must not

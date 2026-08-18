@@ -1,4 +1,3 @@
-import * as Location from "expo-location";
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
@@ -10,6 +9,7 @@ import { HistoryScreen } from "../components/HistoryScreen";
 import { ProfileModal } from "../components/ProfileModal";
 import { QrScanner } from "../components/QrScanner";
 import { ApiError, api, type Bag, type StaffActivity } from "../lib/api";
+import { getCurrentLocationSafe } from "../lib/geo";
 import { useNetworkStatus } from "../lib/net";
 import { useAuthStore } from "../lib/store/auth";
 import { useOfflineQueue } from "../lib/store/offlineQueue";
@@ -17,17 +17,6 @@ import { useThemeStore } from "../lib/store/theme";
 
 type Step = "scan" | "loading" | "soft_audit" | "processing" | "result";
 type Action = "DEPART" | "ARRIVE";
-
-async function getLocation(): Promise<{ lat?: number; lng?: number }> {
-  try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return {};
-    const pos = await Location.getCurrentPositionAsync({});
-    return { lat: pos.coords.latitude, lng: pos.coords.longitude };
-  } catch {
-    return {};
-  }
-}
 
 function randomClientId(): string {
   return `evt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -126,7 +115,7 @@ export default function LineHaulScreen() {
 
   async function runAction(act: Action, targetBag: Bag, manual: boolean, softAuditIds: string[]) {
     setStep("processing");
-    const { lat, lng } = await getLocation();
+    const { lat, lng } = await getCurrentLocationSafe();
     const clientTimestamp = new Date().toISOString();
 
     if (!online) {

@@ -1,4 +1,3 @@
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Pressable, ScrollView, Text, View } from "react-native";
@@ -10,6 +9,7 @@ import { HistoryScreen } from "../../components/HistoryScreen";
 import { ProfileModal } from "../../components/ProfileModal";
 import { QrScanner } from "../../components/QrScanner";
 import { ApiError, api, type Bag, type StaffActivity } from "../../lib/api";
+import { getCurrentLocationSafe } from "../../lib/geo";
 import { useThemeStore } from "../../lib/store/theme";
 
 type Step = "scan_bag" | "unsealing" | "scan_children";
@@ -19,17 +19,6 @@ interface LogEntry {
   trackingId: string;
   kind: "claimed" | "stowaway" | "error";
   message: string;
-}
-
-async function getLocation(): Promise<{ lat?: number; lng?: number }> {
-  try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return {};
-    const pos = await Location.getCurrentPositionAsync({});
-    return { lat: pos.coords.latitude, lng: pos.coords.longitude };
-  } catch {
-    return {};
-  }
 }
 
 export default function ClaimScreen() {
@@ -74,7 +63,7 @@ export default function ClaimScreen() {
         setStep("scan_bag");
         return;
       }
-      const { lat, lng } = await getLocation();
+      const { lat, lng } = await getCurrentLocationSafe();
       const unsealed = await api.unsealBag(resolved.id, lat, lng);
       setBag(unsealed);
       setStep("scan_children");
@@ -94,7 +83,7 @@ export default function ClaimScreen() {
         setLog((l) => [{ key: `${Date.now()}`, trackingId: rawCode, kind: "error", message: "Not a parcel code" }, ...l]);
         return;
       }
-      const { lat, lng } = await getLocation();
+      const { lat, lng } = await getCurrentLocationSafe();
       const result = await api.claimChild(bag.bag_id, resolved.id, lat, lng);
       setClaimedCount((c) => c + 1);
       if (result.stowaway) {

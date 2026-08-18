@@ -1,9 +1,9 @@
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
 
 import { api, type Manifest } from "../../lib/api";
+import { getCurrentLocationSafe } from "../../lib/geo";
 
 // Defense 8 (Apartment Trap / Routing): stops arrive already TSP-sorted and
 // multi-drop-grouped from the backend. This screen only renders them and
@@ -16,18 +16,10 @@ export default function ManifestScreen() {
 
   useEffect(() => {
     (async () => {
-      let lat: number | undefined;
-      let lng: number | undefined;
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === "granted") {
-          const pos = await Location.getCurrentPositionAsync({});
-          lat = pos.coords.latitude;
-          lng = pos.coords.longitude;
-        }
-      } catch {
-        // route without a start point — backend just returns stops unsorted
-      }
+      // route without a start point on a GPS timeout — backend just
+      // returns stops unsorted rather than leaving the agent stuck on this
+      // loading spinner indefinitely.
+      const { lat, lng } = await getCurrentLocationSafe();
       const m = await api.getManifest(lat, lng);
       setManifest(m);
       setLoading(false);
