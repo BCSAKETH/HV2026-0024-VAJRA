@@ -13,7 +13,7 @@ import { Image, Pressable, Text, View } from "react-native";
 // the longest edge at 1600px is what actually bounds the file size; a
 // bill/parcel photo doesn't need more resolution than that to stay fully
 // legible for OCR or condition-proof review.
-const MAX_DIMENSION = 1600;
+const MAX_DIMENSION = 1200;
 
 export interface CapturedPhoto {
   uri: string;
@@ -40,35 +40,26 @@ export function PhotoCapture({ onCaptured, hint }: Props) {
     setCapturing(true);
     let photo: { uri: string; width?: number; height?: number; base64?: string } | undefined;
     try {
-      photo = await cameraRef.current.takePictureAsync({ quality: 0.6, base64: true });
+      photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: true });
       if (!photo) return;
 
-      // Resize (not just compress) before it ever gets near the network.
-      // manipulateAsync is the battle-tested, universal Expo API.
-      const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0) && (photo.width ?? 0) > 0;
-      const resizeAction = isLandscape ? { resize: { width: MAX_DIMENSION } } : { resize: { width: MAX_DIMENSION } };
-      const resized = await ImageManipulator.manipulateAsync(
-        photo.uri,
-        [resizeAction],
-        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
+      // Resize (not just compress) before it ever gets near the network --
+      // see MAX_DIMENSION comment above for why quality alone wasn't enough.
+      // manipulateAsync is deprecated as of this SDK (v57, per mobile/AGENTS.md)
+      // -- manipulate()'s chainable context API is the current replacement.
+      const context = ImageManipulator.manipulate(photo.uri);
+      const isLandscape = (photo.width ?? 0) >= (photo.height ?? 0);
+      context.resize(isLandscape ? { width: MAX_DIMENSION, height: null } : { width: null, height: MAX_DIMENSION });
+      const rendered = await context.renderAsync();
+      const resized = await rendered.saveAsync({ format: ImageManipulator.SaveFormat.JPEG, compress: 0.4, base64: true });
 
-      setPreview({
-        uri: resized.uri,
-        name: `photo-${Date.now()}.jpg`,
-        type: "image/jpeg",
-        base64: resized.base64 || photo.base64,
-      });
+      setPreview({ uri: resized.uri, base64: resized.base64 ?? photo.base64, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
     } catch {
-      // Fallback if resizing fails
-      if (photo) {
-        setPreview({
-          uri: photo.uri,
-          name: `photo-${Date.now()}.jpg`,
-          type: "image/jpeg",
-          base64: photo.base64,
-        });
-      }
+      // If resizing itself fails for any reason, fall back to the original
+      // capture already in hand rather than losing the photo or firing the
+      // shutter a second time -- still functional, just without the size
+      // guarantee that resize would have added.
+      if (photo) setPreview({ uri: photo.uri, base64: photo.base64, name: `photo-${Date.now()}.jpg`, type: "image/jpeg" });
     } finally {
       setCapturing(false);
     }

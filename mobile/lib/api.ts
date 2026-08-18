@@ -120,14 +120,18 @@ const REQUEST_TIMEOUT_MS = 45_000;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) };
+  // "append" is the actual FormData interface (works for the web standard and
+  // RN's polyfill alike) -- safer than duck-typing on "_parts", which is an
+  // RN-polyfill implementation detail that could change between versions.
   const isFormData =
     init?.body instanceof FormData ||
-    (init?.body && typeof init.body === "object" && "_parts" in init.body);
-  if (!isFormData) {
-    headers["Content-Type"] = "application/json";
-  } else {
+    (init?.body != null && typeof init.body === "object" && "append" in init.body);
+  if (isFormData) {
     delete headers["Content-Type"];
+  } else if (!headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
   }
+
   const token = useAuthStore.getState().accessToken;
   if (token) headers.Authorization = `Bearer ${token}`;
 

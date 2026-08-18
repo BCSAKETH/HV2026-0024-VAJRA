@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOCUS: Role-Based Workflows</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ivory: "#F8F5EF",
+                        navy: "#172B3A",
+                        indigo: "#4F46E5",
+                        orange: "#E76F2F",
+                        sage: "#6B8F71",
+                        brick: "#B84A3A",
+                    },
+                    fontFamily: {
+                        sans: ['IBM Plex Sans', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8F5EF; color: #172B3A; }
+        .tab-btn.active {
+            background-color: #172B3A;
+            color: #F8F5EF;
+            border-color: #172B3A;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen pb-24">
+
+    <!-- Header -->
+    <header class="bg-navy text-ivory py-16 px-6 text-center shadow-md">
+        <h1 class="text-4xl md:text-5xl font-semibold mb-4">Role-Based Workflows</h1>
+        <p class="text-xl max-w-2xl mx-auto opacity-90 font-light">A clear, professional breakdown of how each role interacts with the LOCUS system daily.</p>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 mt-12">
+        
+        <!-- Role Tabs -->
+        <div class="flex flex-wrap justify-center gap-3 mb-10">
+            <button onclick="switchTab('customer')" class="tab-btn active px-6 py-3 rounded-full border border-navy/20 text-sm font-medium transition-colors duration-200 uppercase tracking-wide">📦 Customer</button>
+            <button onclick="switchTab('delivery')" class="tab-btn px-6 py-3 rounded-full border border-navy/20 text-sm font-medium transition-colors duration-200 uppercase tracking-wide">🛵 Delivery Partner</button>
+            <button onclick="switchTab('manager')" class="tab-btn px-6 py-3 rounded-full border border-navy/20 text-sm font-medium transition-colors duration-200 uppercase tracking-wide">🏢 Hub Manager</button>
+            <button onclick="switchTab('worker')" class="tab-btn px-6 py-3 rounded-full border border-navy/20 text-sm font-medium transition-colors duration-200 uppercase tracking-wide">👷 Warehouse Worker</button>
+            <button onclick="switchTab('driver')" class="tab-btn px-6 py-3 rounded-full border border-navy/20 text-sm font-medium transition-colors duration-200 uppercase tracking-wide">🚚 Line Driver</button>
+        </div>
+
+        <!-- 1. Customer Content -->
+        <div id="customer" class="tab-content active bg-white rounded-xl p-8 shadow-sm border border-navy/10">
+            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-navy/10">
+                <div class="w-12 h-12 bg-sage text-white rounded-lg flex items-center justify-center text-xl shadow-sm">📦</div>
+                <div>
+                    <h2 class="text-2xl text-navy font-semibold">Customer (The Receiver)</h2>
+                    <p class="text-navy/60 text-sm">The end-user waiting for their package delivery.</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-8 border border-gray-100">
+                <h3 class="font-semibold text-navy mb-1 text-sm uppercase tracking-wider">Authentication</h3>
+                <p class="text-navy/80 text-sm"><strong>No app required.</strong> Customers do not need to download software or create passwords. All interactions occur via secure SMS links.</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-sage/10 text-sage rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Receives SMS Notification</h4>
+                        <p class="text-navy/80 mt-1">When their package is processed at the origin hub, they automatically receive an SMS containing a secure tracking link.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-sage/10 text-sage rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Live 3D Tracking</h4>
+                        <p class="text-navy/80 mt-1">Clicking the link opens a public web interface where they can view the real-time location and status of their package on a 3D map.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-sage/10 text-sage rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Secure OTP Handover</h4>
+                        <p class="text-navy/80 mt-1">When the delivery agent arrives, the customer receives a final SMS OTP (One-Time Password). They must provide this code to the agent to verify their identity and receive the package.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Delivery Partner Content -->
+        <div id="delivery" class="tab-content bg-white rounded-xl p-8 shadow-sm border border-navy/10">
+            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-navy/10">
+                <div class="w-12 h-12 bg-orange text-white rounded-lg flex items-center justify-center text-xl shadow-sm">🛵</div>
+                <div>
+                    <h2 class="text-2xl text-navy font-semibold">Delivery Partner</h2>
+                    <p class="text-navy/60 text-sm">The last-mile agent completing the final drop-off.</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-8 border border-gray-100">
+                <h3 class="font-semibold text-navy mb-1 text-sm uppercase tracking-wider">Authentication</h3>
+                <p class="text-navy/80 text-sm">Logs into the mobile app using their phone number and an SMS OTP. The system recognizes their role and instantly loads their daily delivery manifest.</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-orange/10 text-orange rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Route Optimization</h4>
+                        <p class="text-navy/80 mt-1">The app groups nearby parcels together and provides an optimized map route, ensuring they visit addresses in the most efficient order.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-orange/10 text-orange rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Geofenced Drop-offs</h4>
+                        <p class="text-navy/80 mt-1">To prevent false delivery claims, the "Mark as Delivered" button remains disabled until the phone's hardware GPS proves the agent is within 100 meters of the geocoded address.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-orange/10 text-orange rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">OTP Verification</h4>
+                        <p class="text-navy/80 mt-1">The agent asks the customer for their SMS OTP, enters it into the app, and finalizes the delivery. This mathematically proves the package reached the correct recipient.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Hub Manager Content -->
+        <div id="manager" class="tab-content bg-white rounded-xl p-8 shadow-sm border border-navy/10">
+            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-navy/10">
+                <div class="w-12 h-12 bg-navy text-white rounded-lg flex items-center justify-center text-xl shadow-sm">🏢</div>
+                <div>
+                    <h2 class="text-2xl text-navy font-semibold">Hub Manager</h2>
+                    <p class="text-navy/60 text-sm">The administrator overseeing warehouse operations.</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-8 border border-gray-100">
+                <h3 class="font-semibold text-navy mb-1 text-sm uppercase tracking-wider">Authentication</h3>
+                <p class="text-navy/80 text-sm">Logs into the Web Dashboard on a computer using their phone number and an SMS OTP. Gains access to the Command Center based on their administrative permissions.</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-navy/10 text-navy rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Generates Identifiers</h4>
+                        <p class="text-navy/80 mt-1">Before operations begin, they use the Printer module to generate and print batches of blank QR codes for individual parcels (TRK) and transit bags (BAG) using thermal label printers.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-navy/10 text-navy rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Live Network Monitoring</h4>
+                        <p class="text-navy/80 mt-1">They monitor a live topology map showing active trucks and shipments moving across the supply chain, ensuring regional operations remain on schedule.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-navy/10 text-navy rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Exception Handling</h4>
+                        <p class="text-navy/80 mt-1">If the system detects anomalies (such as a compromised QR code or a misrouted shipment), the manager receives instant alerts in their Security Inbox to investigate.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Warehouse Worker Content -->
+        <div id="worker" class="tab-content bg-white rounded-xl p-8 shadow-sm border border-navy/10">
+            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-navy/10">
+                <div class="w-12 h-12 bg-brick text-white rounded-lg flex items-center justify-center text-xl shadow-sm">👷</div>
+                <div>
+                    <h2 class="text-2xl text-navy font-semibold">Warehouse Worker</h2>
+                    <p class="text-navy/60 text-sm">The staff responsible for intake, sorting, and packing.</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-8 border border-gray-100">
+                <h3 class="font-semibold text-navy mb-1 text-sm uppercase tracking-wider">Authentication</h3>
+                <p class="text-navy/80 text-sm">Logs into the mobile app via SMS OTP. The app automatically provisions the specific scanning and consolidation tools needed for warehouse operations.</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-brick/10 text-brick rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">AI-Assisted Intake</h4>
+                        <p class="text-navy/80 mt-1">Upon receiving a package, they affix a blank QR code and photograph the handwritten shipping bill. Mistral Vision AI instantly extracts the text, eliminating manual data entry.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-brick/10 text-brick rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Smart Consolidation</h4>
+                        <p class="text-navy/80 mt-1">To prepare shipments for transit, they scan individual parcels and pack them into larger Transit Bags assigned to specific destination cities.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-brick/10 text-brick rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Routing Validation</h4>
+                        <p class="text-navy/80 mt-1">If a worker attempts to pack a parcel into a bag destined for the wrong city, the application flashes red and blocks the scan, acting as a physical firewall against routing errors.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Line Driver Content -->
+        <div id="driver" class="tab-content bg-white rounded-xl p-8 shadow-sm border border-navy/10">
+            <div class="flex items-center gap-4 mb-6 pb-6 border-b border-navy/10">
+                <div class="w-12 h-12 bg-indigo text-white rounded-lg flex items-center justify-center text-xl shadow-sm">🚚</div>
+                <div>
+                    <h2 class="text-2xl text-navy font-semibold">Line Driver</h2>
+                    <p class="text-navy/60 text-sm">The driver transporting sealed transit bags between major hubs.</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-8 border border-gray-100">
+                <h3 class="font-semibold text-navy mb-1 text-sm uppercase tracking-wider">Authentication</h3>
+                <p class="text-navy/80 text-sm">Logs into the mobile app via SMS OTP. The app recognizes them as a transit driver and displays the bags assigned to their vehicle.</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo/10 text-indigo rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Departure Scan</h4>
+                        <p class="text-navy/80 mt-1">They scan the sealed Transit Bag to register it as "In-Transit", load it into the truck, and depart for the destination hub.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo/10 text-indigo rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Offline Resilience</h4>
+                        <p class="text-navy/80 mt-1">If the truck travels through areas with poor cellular reception, the app seamlessly switches to Offline Mode, queuing scans locally and syncing them once a connection is reestablished.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo/10 text-indigo rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                    <div>
+                        <h4 class="font-semibold text-lg text-navy">Anti-Clone Speed Validation</h4>
+                        <p class="text-navy/80 mt-1">The system continuously checks the distance and time between scans. If a QR code is scanned in two distant cities too quickly, it proves the code was cloned and instantly flags it for security review.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="text-center pt-16 pb-10 text-navy/40 text-sm">
+        <p>LOCUS — The Exact Point of Truth</p>
+    </footer>
+
+    <script>
+        function switchTab(roleId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active', 'bg-navy', 'text-ivory'));
+            
+            document.getElementById(roleId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>

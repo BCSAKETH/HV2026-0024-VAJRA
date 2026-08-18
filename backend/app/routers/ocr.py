@@ -35,8 +35,8 @@ async def ocr_bill(
 
 @router.post("/bill-base64", response_model=OcrExtractOut)
 async def ocr_bill_base64(
-    payload: OcrBase64In,
     staff: Annotated[dict, Depends(get_current_staff)],
+    payload: OcrBase64In,
 ) -> OcrExtractOut:
     """JSON/Base64 alternative for mobile clients to avoid Android native multipart
     FormData streaming crashes."""
@@ -47,7 +47,10 @@ async def ocr_bill_base64(
     try:
         content = base64.b64decode(raw_b64)
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid base64 image data: {exc}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid base64 image data: {exc}") from exc
+
+    if not content:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image data")
 
     try:
         fields = await extract_bill_fields(content, mime_type=payload.mime_type or "image/jpeg")
@@ -55,3 +58,4 @@ async def ocr_bill_base64(
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
     return OcrExtractOut(**{k: fields.get(k) for k in OcrExtractOut.model_fields})
+
