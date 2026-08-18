@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Pressable, ScrollView, Text, TextInput, Vibration, View } from "react-native";
 
-import { QrScanner } from "../../components/QrScanner";
-import { ApiError, api, type Bag } from "../../lib/api";
+import { QrScanner } from "../components/QrScanner";
+import { ApiError, api, type Bag } from "../lib/api";
 
 type Step = "scan_bag" | "loading_bag" | "select_destination" | "scanning" | "dispatch" | "sealed";
 

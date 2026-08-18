@@ -12,11 +12,13 @@ function LoginForm() {
   const setSession = useAuthStore((s) => s.setSession);
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("+91");
+  const [localNumber, setLocalNumber] = useState(""); // bare 10 digits — "+91" is a fixed prefix, never typed
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [demoBypassAvailable, setDemoBypassAvailable] = useState(false);
+
+  const phone = `+91${localNumber}`;
 
   async function requestOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -62,15 +64,20 @@ function LoginForm() {
         {step === "phone" ? (
           <>
             <label className="mb-2 block text-sm font-medium text-navy">Staff phone number</label>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+919876543210"
-              className="mb-4 w-full rounded-xl border border-navy/15 px-4 py-3 font-mono text-navy outline-none focus:border-indigo"
-            />
+            <div className="mb-4 flex overflow-hidden rounded-xl border border-navy/15 focus-within:border-indigo">
+              <span className="flex items-center bg-navy/5 px-4 font-mono text-navy/60">+91</span>
+              <input
+                value={localNumber}
+                onChange={(e) => setLocalNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="9876543210"
+                inputMode="numeric"
+                maxLength={10}
+                className="w-full px-4 py-3 font-mono text-navy outline-none"
+              />
+            </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || localNumber.length !== 10}
               className="w-full rounded-xl bg-indigo py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Sending…" : "Send OTP"}

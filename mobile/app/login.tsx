@@ -10,11 +10,13 @@ export default function Login() {
   const setSession = useAuthStore((s) => s.setSession);
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("+91");
+  const [localNumber, setLocalNumber] = useState(""); // bare 10 digits — "+91" is a fixed prefix, never typed
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [demoBypassAvailable, setDemoBypassAvailable] = useState(false);
+
+  const phone = `+91${localNumber}`;
 
   async function handleRequestOtp() {
     setError(null);
@@ -55,18 +57,26 @@ export default function Login() {
         {step === "phone" ? (
           <>
             <Text className="mb-2 text-sm font-medium text-navy">Staff phone number</Text>
-            <TextInput
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              placeholder="+919876543210"
-              className="mb-4 rounded-xl border border-navy/15 px-4 py-3 text-navy"
-              style={{ fontFamily: "monospace" }}
-            />
+            <View className="mb-4 flex-row overflow-hidden rounded-xl border border-navy/15">
+              <View className="items-center justify-center bg-navy/5 px-4">
+                <Text className="text-navy/60" style={{ fontFamily: "monospace" }}>
+                  +91
+                </Text>
+              </View>
+              <TextInput
+                value={localNumber}
+                onChangeText={(t) => setLocalNumber(t.replace(/\D/g, "").slice(0, 10))}
+                keyboardType="number-pad"
+                placeholder="9876543210"
+                maxLength={10}
+                className="flex-1 px-4 py-3 text-navy"
+                style={{ fontFamily: "monospace" }}
+              />
+            </View>
             <Pressable
               onPress={handleRequestOtp}
-              disabled={loading}
-              className="items-center rounded-xl bg-indigo py-3"
+              disabled={loading || localNumber.length !== 10}
+              className="items-center rounded-xl bg-indigo py-3 disabled:opacity-50"
             >
               {loading ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">Send OTP</Text>}
             </Pressable>

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-StaffRole = Literal["SUPER_ADMIN", "HUB_MANAGER", "WAREHOUSE_STAFF", "LINE_HAUL", "LAST_MILE"]
+StaffRole = Literal["SUPER_ADMIN", "HUB_MANAGER", "QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"]
 
 
 class RequestOtpIn(BaseModel):

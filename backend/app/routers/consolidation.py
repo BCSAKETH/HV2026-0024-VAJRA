@@ -20,7 +20,7 @@ from app.models.phase2 import (
 
 router = APIRouter(prefix="/bags", tags=["consolidation"])
 
-_ROLES = ("WAREHOUSE_STAFF", "SUPER_ADMIN")
+_ROLES = ("CONSOLIDATOR", "SUPER_ADMIN")
 TOLERANCE_PCT = 1.5
 HIGH_VALUE_THRESHOLD = 5000
 

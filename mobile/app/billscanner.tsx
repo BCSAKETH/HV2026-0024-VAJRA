@@ -2,9 +2,9 @@ import * as Location from "expo-location";
 import { useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import { PhotoCapture, type CapturedPhoto } from "../../components/PhotoCapture";
-import { QrScanner } from "../../components/QrScanner";
-import { ApiError, api } from "../../lib/api";
+import { PhotoCapture, type CapturedPhoto } from "../components/PhotoCapture";
+import { QrScanner } from "../components/QrScanner";
+import { ApiError, api } from "../lib/api";
 
 type Step = "scan" | "bill_photo" | "ocr_loading" | "review" | "condition_photos" | "submitting" | "done";
 

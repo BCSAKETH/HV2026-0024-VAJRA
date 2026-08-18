@@ -12,7 +12,7 @@ from app.models.phase2 import ConditionPhotosOut, IntakeConfirmIn, MsmeOut, Ship
 
 router = APIRouter(tags=["shipments"])
 
-_INTAKE_ROLES = ("WAREHOUSE_STAFF", "SUPER_ADMIN")
+_INTAKE_ROLES = ("BILL_SCANNER", "SUPER_ADMIN")
 
 
 def _get_shipment_or_404(admin, tracking_id: str) -> dict:

@@ -3,21 +3,25 @@ import { Pressable, Text, View } from "react-native";
 
 import { useAuthStore } from "../lib/store/auth";
 
-// WAREHOUSE_STAFF has real screens from Phase 2 onward — everyone else still
-// lands on the placeholder below until their phase is built.
+// Every floor role has a real screen — mirrors the web app's
+// destinationForRole() in lib/roleRouting.ts exactly. QR_PASTER is the one
+// floor role that actually lives on the web app (Digital Printer), so it
+// has no mobile screen and falls through to the placeholder below.
 
 const ROLE_LABEL: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
   HUB_MANAGER: "Hub Manager",
-  WAREHOUSE_STAFF: "Warehouse Staff (Intake & Consolidation)",
+  QR_PASTER: "QR Paster",
+  BILL_SCANNER: "Bill Scanner",
+  CONSOLIDATOR: "Consolidator",
   LINE_HAUL: "Line-Haul Driver",
   LAST_MILE: "Last-Mile Agent",
 };
 
-// Placeholder landing screen. From Phase 2 onward this is where role-based
-// routing takes over: WAREHOUSE_STAFF -> Intake/Consolidate tabs,
-// LINE_HAUL -> hub scanner, LAST_MILE -> manifest screen, etc. — decided
-// purely from `staff.role`, never chosen manually by the person logging in.
+// Placeholder landing screen for any role without a dedicated mobile
+// screen (SUPER_ADMIN, HUB_MANAGER, QR_PASTER all live on the web app).
+// Role-based routing below is decided purely from `staff.role`, never
+// chosen manually by the person logging in.
 export default function Home() {
   const router = useRouter();
   const staff = useAuthStore((s) => s.staff);
@@ -27,8 +31,12 @@ export default function Home() {
     return <Redirect href="/login" />;
   }
 
-  if (staff.role === "WAREHOUSE_STAFF") {
-    return <Redirect href="/warehouse/intake" />;
+  if (staff.role === "BILL_SCANNER") {
+    return <Redirect href="/billscanner" />;
+  }
+
+  if (staff.role === "CONSOLIDATOR") {
+    return <Redirect href="/consolidator" />;
   }
 
   if (staff.role === "LINE_HAUL") {

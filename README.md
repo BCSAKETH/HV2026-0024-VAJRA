@@ -39,9 +39,11 @@ Visit `http://localhost:8000/docs` for the interactive API docs. `/health` shoul
 |---|---|
 | `+911000000001` | Super Admin |
 | `+911000000002` | Hub Manager (Gachibowli) |
-| `+911000000003` | Warehouse Staff — Intake & Consolidation (Gachibowli) |
-| `+911000000004` | Line-Haul Driver (Gachibowli) |
-| `+911000000005` | Last-Mile Agent (Hitec City) |
+| `+911000000003` | QR Paster (Gachibowli) |
+| `+911000000004` | Bill Scanner (Gachibowli) |
+| `+911000000005` | Consolidator (Gachibowli) |
+| `+911000000006` | Line-Haul Driver (Gachibowli) |
+| `+911000000007` | Last-Mile Agent (Hitec City) |
 
 ## 2. Web (Next.js)
 
@@ -78,15 +80,15 @@ Warm Ivory `#F8F5EF` background · Deep Navy `#172B3A` text · Cobalt-Indigo `#4
 - **Staff auth is app-issued JWTs**, not raw Supabase sessions. `/auth/verify-otp` confirms the phone (or accepts the demo bypass code) and then FastAPI mints its own short-lived JWT embedding `staff.id`/`role`. Mobile/web store that token and send it as `Authorization: Bearer <token>` on every request.
 - **Fast2SMS is for consumers only** (SMS receipts + delivery OTP) — never for staff login. Custom-text sends (`route=q`) need a real ≥100 INR Fast2SMS wallet top-up before they're unlocked, regardless of trial status — see `app/core/fast2sms.py`.
 - **`tracking_events` cannot be UPDATE'd or DELETE'd**, enforced by a Postgres trigger — this holds even for the backend's service-role key. Corrections must be new events, never edits.
-- **Roles**: Role 1A (Intake) and Role 1B (Consolidation) share a single `WAREHOUSE_STAFF` role — one worker, two tabs in the app — rather than being two separate roles. Adjust `staff_role` in the migration if you'd rather split them.
+- **Roles**: six floor roles plus `SUPER_ADMIN` — `HUB_MANAGER`, `QR_PASTER` (web, runs the Digital Printer), `BILL_SCANNER` (mobile, ex-Intake), `CONSOLIDATOR` (mobile, ex-Consolidation), `LINE_HAUL`, `LAST_MILE`. Intake and Consolidation used to share one `WAREHOUSE_STAFF` role/app tab; they're now separate roles matching the real one-worker-one-station floor model (see "Role split" below).
 - **`delivery_lat`/`delivery_lng` come from geocoding the bill's address via Nominatim (OSM), not from the vision OCR model.** Mistral's vision OCR only ever returns text fields (`name`, `phone`, `pincode`, `price`, `address`) — coordinates are a separate backend step, built in Phase 2.
 - Verify `MISTRAL_VISION_MODEL` in `.env` is still live before relying on OCR — vision models get renamed/retired (this project already switched providers once for exactly this reason; see "Post-Phase-5 hardening" below).
 
 ## Phase 2 — what's live now
 
-- **Digital Printer** (`web/printer`, behind staff login): two tabs, generates batches of `TRK-######` or `BAG-######` QR codes with their 6-digit shortcode fallback printed underneath. IDs come from Postgres sequences (`0002` migration), never from counting rows, so concurrent batches can't collide.
-- **Intake (Role 1A)**: `mobile` → log in as `WAREHOUSE_STAFF` → Intake tab. Scan a blank parcel QR → photograph the bill (Mistral Vision OCR extracts name/phone/address/pincode/value — manual entry is the fallback, always editable) → 2 proof-of-condition photos → confirm. Confirming geocodes the address via Nominatim (never from the OCR model — it can't know coordinates), fires the Fast2SMS intake receipt, and writes the `INTAKE` ledger event.
-- **Consolidation (Role 1B)**: same app, Consolidate tab. Scan a blank bag QR → bottom drawer to pick the destination hub → scan children in, with a real per-frame bounding box (from `expo-camera`'s reported bounds, not a fake static square) drawn around whatever QR is in frame. Defense 1 (pincode collision) and Defense 2 (tamper seal on >₹5,000 parcels) are enforced backend-side and surfaced as a red flash + vibration or a blocking modal. Weigh-and-dispatch runs Defense 3's ±1.5% tolerance engine with a live progress bar; the bag only seals if the backend agrees the physical weight matches.
+- **Digital Printer** (`web/printer`, behind staff login — `QR_PASTER`/`HUB_MANAGER`/`SUPER_ADMIN`): historically generated batches; **rebuilt post-role-split to generate one `TRK-######` or `BAG-######` QR at a time**, screenshot standing in for a thermal printer in the demo — see "Role split" below. IDs still come from Postgres sequences (`0002` migration), never from counting rows.
+- **Intake (Role 1A)**: `mobile` → log in as a `BILL_SCANNER` (was `WAREHOUSE_STAFF`) → lands on the intake screen. Scan a blank parcel QR → photograph the bill (Mistral Vision OCR extracts name/phone/address/pincode/value — manual entry is the fallback, always editable) → 2 proof-of-condition photos → confirm. Confirming geocodes the address via Nominatim (never from the OCR model — it can't know coordinates), fires the Fast2SMS intake receipt, and writes the `INTAKE` ledger event.
+- **Consolidation (Role 1B)**: `mobile` → log in as a `CONSOLIDATOR` (was `WAREHOUSE_STAFF`) → lands on the consolidate screen. Scan a blank bag QR → bottom drawer to pick the destination hub → scan children in, with a real per-frame bounding box (from `expo-camera`'s reported bounds, not a fake static square) drawn around whatever QR is in frame. Defense 1 (pincode collision) and Defense 2 (tamper seal on >₹5,000 parcels) are enforced backend-side and surfaced as a red flash + vibration or a blocking modal. Weigh-and-dispatch runs Defense 3's ±1.5% tolerance engine with a live progress bar; the bag only seals if the backend agrees the physical weight matches.
 - One thing I can't verify from here: the bounding-box overlay's coordinates are documented by Expo as pre-adjusted to the camera view's own rendered size, so no manual scaling should be needed — but it's worth a quick look on a real device before the demo, since I have no physical camera to test against in this environment.
 
 ## Phase 3 — what's live now
@@ -160,13 +162,23 @@ Everything below was found and fixed by actually exercising the running system a
 
 Originally staff/hubs/pincode routes were seed-only with no in-app way to manage them — flagged as a real gap and now closed for staff specifically (hubs/pincode routes are still seed/SQL-only — ask if you want those built out too).
 
-- `GET/POST/DELETE /api/admin/staff` — Hub Managers can add/remove **operational** staff (`WAREHOUSE_STAFF`, `LINE_HAUL`, `LAST_MILE`) for **their own hub only**; the hub is forced server-side from the caller's own `assigned_hub_id`, never trusted from the request body. A Hub Manager attempting to create another `HUB_MANAGER`/`SUPER_ADMIN`, or delete staff outside their hub, gets a 403 — verified live with a 10-case authorization test (escalation attempts, cross-hub deletes, self-delete, all correctly rejected).
+- `GET/POST/DELETE /api/admin/staff` — Hub Managers can add/remove **operational** staff (`QR_PASTER`, `BILL_SCANNER`, `CONSOLIDATOR`, `LINE_HAUL`, `LAST_MILE`) for **their own hub only**; the hub is forced server-side from the caller's own `assigned_hub_id`, never trusted from the request body. A Hub Manager attempting to create another `HUB_MANAGER`/`SUPER_ADMIN`, or delete staff outside their hub, gets a 403 — verified live with a 10-case authorization test (escalation attempts, cross-hub deletes, self-delete, all correctly rejected).
 - Deleting a staff member removes both the `staff` row and the underlying Supabase Auth user, so there's no orphaned account left able to request an OTP.
 - Web dashboard now has three tabs (`Overview` / `Analytics` / `Staff`) instead of one page — shared "preview as" state lives in `DashboardProvider` so it stays in sync across tabs. `Analytics` adds a shipments-by-status breakdown on top of the existing KPI cards. `Staff` is the roster + add-staff form, with the same role/hub restrictions enforced in the UI as the backend.
 
 ## Network management (added post-Phase-5)
 
 `GET/POST/DELETE /api/admin/hubs` and `/api/admin/pincode-routes` close the other half of the seed-only gap. Hubs are Super-Admin-only (creating infrastructure isn't a "my hub" decision the way staff is); pincode routes follow the staff pattern — a Hub Manager can add/remove routes pointing to their own hub, Super Admin can touch any. Deleting a hub is blocked with a clear 409 while pincode routes still reference it, rather than silently orphaning them — verified live, including the "blocked, then succeeds once the dependent route is removed" path. Both live in the dashboard's new **Network** tab.
+
+## Role split — 6 floor roles (added post-Phase-5)
+
+`WAREHOUSE_STAFF` (one worker, two app tabs) was replaced with two separate roles matching the real per-hub staffing model: `QR_PASTER` (web, Digital Printer), `BILL_SCANNER` (mobile, ex-Intake), `CONSOLIDATOR` (mobile, ex-Consolidation) — alongside the existing `HUB_MANAGER`, `LINE_HAUL`, `LAST_MILE`, `SUPER_ADMIN`.
+
+- **DB**: `supabase/migrations/0004_role_split.sql` — Postgres can't drop an enum value in place, so it creates a new `staff_role_new` type, migrates the `staff.role` column with a `CASE` mapping old `WAREHOUSE_STAFF` rows to `BILL_SCANNER`, drops the old type, and renames the new one into place. **This migration has not been applied to the live Supabase project yet** — run it manually via the SQL Editor (same pattern as `reset_to_real_data.md`) before the role split takes effect in production.
+- **Backend**: `_INTAKE_ROLES`/`_ROLES` guards in `shipments.py`/`consolidation.py` now check `BILL_SCANNER`/`CONSOLIDATOR` instead of `WAREHOUSE_STAFF`; `printer.py` allows `QR_PASTER`/`HUB_MANAGER`/`SUPER_ADMIN` and now generates one QR per call instead of a batch (`PrinterGenerateIn`/`Out` schemas dropped the `count`/`items` list in favor of a single `item`). `app/seed.py` seeds one staff account per role (7 total) instead of 5.
+- **Web**: `printer/page.tsx` rebuilt around two single-generate buttons ("Generate Tracking ID" / "Generate Bag ID") and one large result card, sized to be screenshotted as a thermal-printer substitute in the demo. `roleRouting.ts`/`lib/api.ts`/`dashboard/staff/page.tsx` all updated for the 7-role set.
+- **Mobile**: `app/warehouse/intake.tsx` and `app/warehouse/consolidate.tsx` moved to flat top-level screens — `app/billscanner.tsx` and `app/consolidator.tsx` — matching the existing flat pattern already used by `linehaul.tsx`/`lastmile/`. `home.tsx`'s role-redirect table and `lib/api.ts`'s `StaffRole` type updated to match.
+- **Login UX (both apps)**: the phone field no longer ships with `+91` as editable, deletable text inside the input. It's now a static `+91` prefix badge next to a numeric-only field capped at 10 digits — matches how every Indian OTP-login flow (Amazon, Flipkart, etc.) actually looks, and removes the "can I delete the +91" confusion entirely.
 
 ## Bootstrapping with real data (no demo data)
 

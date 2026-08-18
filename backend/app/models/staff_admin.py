@@ -2,13 +2,13 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-StaffRole = Literal["SUPER_ADMIN", "HUB_MANAGER", "WAREHOUSE_STAFF", "LINE_HAUL", "LAST_MILE"]
+StaffRole = Literal["SUPER_ADMIN", "HUB_MANAGER", "QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"]
 
 # Roles a Hub Manager is allowed to create/delete — operational floor staff
 # for their own hub only. HUB_MANAGER and SUPER_ADMIN are never creatable by
 # a Hub Manager, regardless of what's in the request — that's a privilege
 # escalation path and is rejected server-side, not just hidden in the UI.
-HUB_MANAGER_CREATABLE_ROLES = ("WAREHOUSE_STAFF", "LINE_HAUL", "LAST_MILE")
+HUB_MANAGER_CREATABLE_ROLES = ("QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE")
 
 
 class StaffOut(BaseModel):

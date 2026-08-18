@@ -3,7 +3,7 @@
 // overrides this in .env.local to point at the standalone uvicorn server.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
-export type StaffRole = "SUPER_ADMIN" | "HUB_MANAGER" | "WAREHOUSE_STAFF" | "LINE_HAUL" | "LAST_MILE";
+export type StaffRole = "SUPER_ADMIN" | "HUB_MANAGER" | "QR_PASTER" | "BILL_SCANNER" | "CONSOLIDATOR" | "LINE_HAUL" | "LAST_MILE";
 
 export interface StaffProfile {
   id: string;
@@ -40,8 +40,8 @@ export interface Staff {
   created_at: string;
 }
 
-export const HUB_MANAGER_CREATABLE_ROLES: StaffRole[] = ["WAREHOUSE_STAFF", "LINE_HAUL", "LAST_MILE"];
-export const ALL_STAFF_ROLES: StaffRole[] = ["SUPER_ADMIN", "HUB_MANAGER", "WAREHOUSE_STAFF", "LINE_HAUL", "LAST_MILE"];
+export const HUB_MANAGER_CREATABLE_ROLES: StaffRole[] = ["QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"];
+export const ALL_STAFF_ROLES: StaffRole[] = ["SUPER_ADMIN", "HUB_MANAGER", "QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"];
 
 export interface PincodeRoute {
   pincode: string;
@@ -150,10 +150,10 @@ export const api = {
       body: JSON.stringify({ phone, token }),
     }),
 
-  generateQr: (accessToken: string, type: "PARCEL" | "BAG", count: number) =>
-    request<{ type: string; items: { id: string; shortcode: string }[] }>(
+  generateQr: (accessToken: string, type: "PARCEL" | "BAG") =>
+    request<{ type: string; item: { id: string; shortcode: string } }>(
       "/printer/generate",
-      { method: "POST", body: JSON.stringify({ type, count }) },
+      { method: "POST", body: JSON.stringify({ type }) },
       accessToken
     ),
 

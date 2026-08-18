@@ -5,7 +5,7 @@ import { useAuthStore } from "./store/auth";
 // via EXPO_PUBLIC_API_BASE_URL. Defaults to the local backend for dev.
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
-export type StaffRole = "SUPER_ADMIN" | "HUB_MANAGER" | "WAREHOUSE_STAFF" | "LINE_HAUL" | "LAST_MILE";
+export type StaffRole = "SUPER_ADMIN" | "HUB_MANAGER" | "QR_PASTER" | "BILL_SCANNER" | "CONSOLIDATOR" | "LINE_HAUL" | "LAST_MILE";
 
 export interface StaffProfile {
   id: string;

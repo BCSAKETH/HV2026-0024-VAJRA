@@ -9,7 +9,9 @@ import { useAuthStore } from "@/lib/store/auth";
 const ROLE_LABEL: Record<StaffRole, string> = {
   SUPER_ADMIN: "Super Admin",
   HUB_MANAGER: "Hub Manager",
-  WAREHOUSE_STAFF: "Warehouse Staff",
+  QR_PASTER: "QR Paster",
+  BILL_SCANNER: "Bill Scanner",
+  CONSOLIDATOR: "Consolidator",
   LINE_HAUL: "Line-Haul Driver",
   LAST_MILE: "Last-Mile Agent",
 };

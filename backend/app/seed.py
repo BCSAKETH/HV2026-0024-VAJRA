@@ -36,9 +36,11 @@ PINCODE_ROUTES = {
 STAFF = [
     ("+911000000001", "Anita Rao — Super Admin", "SUPER_ADMIN", None),
     ("+911000000002", "Vikram Shah — Hub Manager", "HUB_MANAGER", "Gachibowli Sorting Center"),
-    ("+911000000003", "Farhan Ali — Warehouse Staff", "WAREHOUSE_STAFF", "Gachibowli Sorting Center"),
-    ("+911000000004", "Sunita Devi — Line-Haul Driver", "LINE_HAUL", "Gachibowli Sorting Center"),
-    ("+911000000005", "Ravi Teja — Last-Mile Agent", "LAST_MILE", "Hitec City Warehouse"),
+    ("+911000000003", "Farhan Ali — QR Paster", "QR_PASTER", "Gachibowli Sorting Center"),
+    ("+911000000004", "Meera Iyer — Bill Scanner", "BILL_SCANNER", "Gachibowli Sorting Center"),
+    ("+911000000005", "Arjun Reddy — Consolidator", "CONSOLIDATOR", "Gachibowli Sorting Center"),
+    ("+911000000006", "Sunita Devi — Line-Haul Driver", "LINE_HAUL", "Gachibowli Sorting Center"),
+    ("+911000000007", "Ravi Teja — Last-Mile Agent", "LAST_MILE", "Hitec City Warehouse"),
 ]
 
 

@@ -9,7 +9,6 @@ PrinterType = Literal["PARCEL", "BAG"]
 
 class PrinterGenerateIn(BaseModel):
     type: PrinterType
-    count: int = Field(1, ge=1, le=100)
 
 
 class PrinterItemOut(BaseModel):
@@ -19,7 +18,7 @@ class PrinterItemOut(BaseModel):
 
 class PrinterGenerateOut(BaseModel):
     type: PrinterType
-    items: list[PrinterItemOut]
+    item: PrinterItemOut
 
 
 # ---- OCR ----

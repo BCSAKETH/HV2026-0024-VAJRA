@@ -15,7 +15,7 @@ interface PrintedItem {
   shortcode: string;
 }
 
-const PRINTER_ROLES = ["WAREHOUSE_STAFF", "HUB_MANAGER", "SUPER_ADMIN"];
+const PRINTER_ROLES = ["QR_PASTER", "HUB_MANAGER", "SUPER_ADMIN"];
 
 export default function PrinterPage() {
   const router = useRouter();
@@ -25,8 +25,7 @@ export default function PrinterPage() {
   const logout = useAuthStore((s) => s.logout);
 
   const [type, setType] = useState<PrinterType>("PARCEL");
-  const [count, setCount] = useState(6);
-  const [items, setItems] = useState<PrintedItem[]>([]);
+  const [current, setCurrent] = useState<PrintedItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,15 +38,16 @@ export default function PrinterPage() {
     }
   }, [hasHydrated, accessToken, staff, router]);
 
-  async function handleGenerate() {
+  async function handleGenerate(nextType: PrinterType) {
     if (!accessToken) return;
+    setType(nextType);
     setError(null);
     setLoading(true);
     try {
-      const res = await api.generateQr(accessToken, type, count);
-      setItems(res.items);
+      const res = await api.generateQr(accessToken, nextType);
+      setCurrent(res.item);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not generate a batch.");
+      setError(err instanceof ApiError ? err.message : "Could not generate a QR code.");
     } finally {
       setLoading(false);
     }
@@ -81,67 +81,42 @@ export default function PrinterPage() {
         </button>
       </header>
 
-      <section className="no-print mx-auto max-w-3xl px-8 py-8">
-        <div className="mb-6 inline-flex rounded-xl border border-navy/10 bg-white p-1">
-          {(["PARCEL", "BAG"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setType(t)}
-              className={`rounded-lg px-5 py-2 text-sm font-semibold transition ${
-                type === t ? "bg-indigo text-white" : "text-navy/60 hover:text-navy"
-              }`}
-            >
-              {t === "PARCEL" ? "Child Parcel QR" : "Master Bag QR"}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-end gap-4 rounded-card border border-navy/10 bg-white p-6 shadow-card">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-navy">Batch size</label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-              className="w-28 rounded-lg border border-navy/15 px-3 py-2 font-mono text-navy"
-            />
-          </div>
+      <section className="no-print mx-auto max-w-md px-8 py-8">
+        <div className="mb-6 flex gap-3">
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate("PARCEL")}
             disabled={loading}
-            className="rounded-lg bg-orange px-6 py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            className="flex-1 rounded-xl bg-orange py-3.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? "Generating…" : `Generate Batch QR${count > 1 ? "s" : ""}`}
+            {loading && type === "PARCEL" ? "Generating…" : "Generate Tracking ID"}
           </button>
-          {items.length > 0 ? (
-            <button
-              onClick={() => window.print()}
-              className="rounded-lg border border-navy/20 px-6 py-2.5 font-semibold text-navy hover:bg-navy/5"
-            >
-              Print
-            </button>
-          ) : null}
+          <button
+            onClick={() => handleGenerate("BAG")}
+            disabled={loading}
+            className="flex-1 rounded-xl bg-indigo py-3.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+          >
+            {loading && type === "BAG" ? "Generating…" : "Generate Bag ID"}
+          </button>
         </div>
 
-        {error ? <p className="mt-4 text-brick">{error}</p> : null}
-      </section>
+        {error ? <p className="mb-4 text-brick">{error}</p> : null}
 
-      {items.length > 0 ? (
-        <section className="mx-auto grid max-w-5xl grid-cols-2 gap-6 px-8 pb-16 sm:grid-cols-3 md:grid-cols-4">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col items-center rounded-card border border-navy/10 bg-white p-5 shadow-card"
-            >
-              <QRCodeSVG value={item.id} size={160} />
-              <p className="mt-3 font-mono text-xs text-navy/50">{item.id}</p>
-              <p className="mt-1 font-mono text-2xl font-semibold tracking-widest text-navy">{item.shortcode}</p>
-            </div>
-          ))}
-        </section>
-      ) : null}
+        {current ? (
+          <div className="flex flex-col items-center rounded-card border border-navy/10 bg-white p-8 shadow-card">
+            <QRCodeSVG value={current.id} size={220} />
+            <p className="mt-4 font-mono text-sm text-navy/50">{current.id}</p>
+            <p className="mt-1 font-mono text-3xl font-semibold tracking-widest text-navy">{current.shortcode}</p>
+            <p className="mt-4 text-center text-sm text-navy/40">
+              Paste this on the {type === "PARCEL" ? "parcel" : "bag"} now. No thermal printer? Screenshot this
+              screen instead — the QR and shortcode both work from a photo.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-card border border-dashed border-navy/20 bg-white/50 p-10 text-center text-navy/40">
+            Generate a code above — one at a time, right before you paste it.
+          </div>
+        )}
+      </section>
     </main>
   );
 }
