@@ -63,7 +63,24 @@ export default function NetworkPage() {
       await api.deleteHub(accessToken, id);
       refreshHubs();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t.network.couldNotDeleteHub);
+      if (err instanceof ApiError && err.status === 409) {
+        // The backend's 409 is a generic "routes still point to it" string —
+        // it doesn't name which ones. Rather than changing that response
+        // shape, look the blocking routes up ourselves: fetch the
+        // network-wide route list (not the possibly-hub-scoped `routes`
+        // state, which could be filtered under a Super Admin's active
+        // preview) and filter to this hub, so the message names exactly
+        // what needs removing before the delete can succeed.
+        const allRoutes = await api.listPincodeRoutes(accessToken, null).catch(() => routes);
+        const blocking = allRoutes.filter((r) => r.destination_hub_id === id);
+        setError(
+          blocking.length > 0
+            ? `${t.network.deleteHubBlockedPrefix} ${blocking.map((r) => r.pincode).join(", ")}`
+            : err.message
+        );
+      } else {
+        setError(err instanceof ApiError ? err.message : t.network.couldNotDeleteHub);
+      }
     }
   }
 
