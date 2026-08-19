@@ -6,6 +6,7 @@ import { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 
 import { createQrTexture } from "./qrTexture";
+import { createCardboardBumpTexture } from "./cardboardTexture";
 
 type Variant = "idle" | "scroll" | "compact";
 
@@ -24,11 +25,12 @@ const PAPER = "#F6F3EC";
 
 function Lid({ openProgress }: { openProgress: number }) {
   const eased = 1 - Math.pow(1 - openProgress, 3); // ease-out cubic
+  const bumpMap = useMemo(() => createCardboardBumpTexture(), []);
   return (
     <group position={[0, 0.5, -0.6]} rotation={[-eased * 2.1, 0, 0]}>
       <mesh position={[0, 0, 0.6]} castShadow>
         <boxGeometry args={[1.62, 0.05, 1.22]} />
-        <meshStandardMaterial color={PAPER} roughness={0.85} />
+        <meshStandardMaterial color={PAPER} roughness={0.85} bumpMap={bumpMap} bumpScale={0.015} />
       </mesh>
       <lineSegments position={[0, 0, 0.6]}>
         <edgesGeometry args={[new THREE.BoxGeometry(1.62, 0.05, 1.22)]} />
@@ -58,6 +60,12 @@ function BoxGroup({ variant, openProgress, accentColor }: { variant: Variant; op
   const groupRef = useRef<THREE.Group>(null);
   const qrTexture = useMemo(() => createQrTexture(accentColor, INK, PAPER), [accentColor]);
   const boxGeo = useMemo(() => new THREE.BoxGeometry(1.6, 1, 1.2), []);
+  // Corrugated-fluting bump map — pure relief, no color change, so the box
+  // still reads as the same PAPER cream from a distance but actually
+  // catches the directional light like a real cardboard surface up close
+  // ("add more details like matter" — this is the material getting real
+  // substance instead of a flat plastic-smooth primitive).
+  const bumpMap = useMemo(() => createCardboardBumpTexture(), []);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -73,7 +81,7 @@ function BoxGroup({ variant, openProgress, accentColor }: { variant: Variant; op
   return (
     <group ref={groupRef} rotation={[0.12, -0.6, 0]}>
       <mesh castShadow receiveShadow geometry={boxGeo}>
-        <meshStandardMaterial color={PAPER} roughness={0.9} />
+        <meshStandardMaterial color={PAPER} roughness={0.9} bumpMap={bumpMap} bumpScale={0.015} />
       </mesh>
       <lineSegments>
         <edgesGeometry args={[boxGeo]} />
@@ -83,6 +91,21 @@ function BoxGroup({ variant, openProgress, accentColor }: { variant: Variant; op
       <mesh position={[0, -0.08, 0.601]}>
         <planeGeometry args={[0.62, 0.62]} />
         <meshBasicMaterial map={qrTexture} toneMapped={false} />
+      </mesh>
+      {/* Packing tape — a real physical detail (nothing on a real shipped
+          box is a perfect flat primitive): a slightly glossier strip
+          running front-to-back across the top seam, plus a short matching
+          strip down the front edge. Kept off the QR decal's face area on
+          purpose. Belongs to the box body (not Lid), so it reads fine in
+          both idle and scroll variants without fighting the open
+          animation. */}
+      <mesh position={[0, 0.505, 0]} castShadow>
+        <boxGeometry args={[0.2, 0.01, 1.22]} />
+        <meshStandardMaterial color="#D9C7A3" roughness={0.35} />
+      </mesh>
+      <mesh position={[0, -0.46, 0.605]} castShadow>
+        <boxGeometry args={[0.2, 0.08, 0.01]} />
+        <meshStandardMaterial color="#D9C7A3" roughness={0.35} />
       </mesh>
       {variant === "scroll" && <Lid openProgress={openProgress} />}
       {variant === "scroll" && <GlowDot accentColor={accentColor} openProgress={openProgress} />}
@@ -111,7 +134,7 @@ function CourierFigure() {
   });
 
   return (
-    <group ref={groupRef} position={[1.35, GROUND_Y, -0.3]} rotation={[0, -0.3, 0]} scale={0.62}>
+    <group ref={groupRef} position={[0.95, GROUND_Y, -0.3]} rotation={[0, -0.3, 0]} scale={0.62}>
       {/* head */}
       <mesh position={[0, 1.05, 0]} castShadow>
         <sphereGeometry args={[0.22, 20, 20]} />
@@ -171,7 +194,7 @@ function DeliveryTruck() {
   ];
 
   return (
-    <group ref={groupRef} position={[-1.95, GROUND_Y, 0.1]} rotation={[0, TRUCK_BASE_ROTATION_Y, 0]} scale={0.42}>
+    <group ref={groupRef} position={[-1.1, GROUND_Y, 0.1]} rotation={[0, TRUCK_BASE_ROTATION_Y, 0]} scale={0.44}>
       {/* cargo box */}
       <mesh position={[-0.15, 0.55, 0]} castShadow>
         <boxGeometry args={[1.1, 0.72, 0.68]} />
@@ -204,10 +227,16 @@ function DeliveryTruck() {
 // only, zero external assets. Each one is a tiny plain cube (no QR decal,
 // no edges lines) so they read as background detail, not competing focal
 // points with the real box.
+// Pulled inward from the original ±1.5 spread — confirmed from real
+// screenshots that the truck and courier (also pulled in below) were
+// getting cropped by the canvas edge on narrower container aspect ratios,
+// since their world positions never accounted for anything but the widest
+// case. Keeping the whole prop cluster within roughly ±1.1 of center gives
+// enough margin to stay fully on-screen down to a ~4:5 container.
 const MINI_BOX_LAYOUT: Array<{ pos: [number, number, number]; scale: number; rotY: number; speed: number }> = [
-  { pos: [-1.5, 0.55, -0.5], scale: 0.22, rotY: 0.4, speed: 1.3 },
-  { pos: [-1.15, -0.15, 0.55], scale: 0.16, rotY: -0.6, speed: 1.7 },
-  { pos: [1.5, 0.85, 0.2], scale: 0.19, rotY: 0.9, speed: 1.1 },
+  { pos: [-1.05, 0.55, -0.5], scale: 0.22, rotY: 0.4, speed: 1.3 },
+  { pos: [-0.85, -0.15, 0.55], scale: 0.16, rotY: -0.6, speed: 1.7 },
+  { pos: [1.05, 0.85, 0.2], scale: 0.19, rotY: 0.9, speed: 1.1 },
   { pos: [0.15, 1.15, -0.9], scale: 0.14, rotY: -0.3, speed: 1.9 },
 ];
 
@@ -314,7 +343,14 @@ export function PackageBoxScene({
         <Canvas
           shadows
           dpr={[1, 1.5]}
-          camera={{ position: [2.6, 1.6, 3.2], fov: 38 }}
+          // Pulled back slightly (was [2.6,1.6,3.2] / fov 38) — confirmed
+          // from real screenshots that the truck and courier were getting
+          // clipped by the canvas edge on the container's actual (often
+          // taller-than-wide) aspect ratio. Combined with pulling those
+          // props inward above, this keeps the whole scene on-screen with
+          // real margin while the box itself loses only a few percent of
+          // its apparent size.
+          camera={{ position: [2.85, 1.75, 3.55], fov: 35 }}
           gl={{ antialias: true, alpha: true }}
         >
           {/* The accent point light was intensity=12, inherited from the
