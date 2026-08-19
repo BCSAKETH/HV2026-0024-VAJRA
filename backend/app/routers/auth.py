@@ -84,21 +84,26 @@ def me_activity(staff: Annotated[dict, Depends(get_current_staff)]) -> dict:
     )
     events = events_res.data or []
 
-    # total_count must NOT be len(events) -- that list is capped at 50 for
-    # the feed display, so it would silently plateau at 50 forever for
-    # anyone with more history than that. Count separately, uncapped.
-    total_res = admin.table("tracking_events").select("id", count="exact").eq("staff_id", staff["id"]).execute()
-    total_count = total_res.count or 0
+    # today_count/total_count must NOT be len(events) or a raw row count --
+    # `events` is capped at 50 for the feed display (would silently plateau
+    # forever for anyone with more history), and a raw tracking_events count
+    # over-counts: one package's lifecycle (e.g. CLAIMED -> OUT_FOR_DELIVERY
+    # -> DELIVERED) logs several separate ledger rows against the same
+    # staff_id -- confirmed live, one delivered package inflated the count
+    # by 4, not 1. Both stats must reflect distinct packages/bags touched,
+    # deduped by tracking_id where present, else bag_id (covers bag-side-only
+    # events like a Line-Haul driver's DEPARTED/ARRIVED_AT_HUB, which carry
+    # no tracking_id at all).
+    def _distinct_touch_count(gte_date: str | None = None) -> int:
+        query = admin.table("tracking_events").select("tracking_id,bag_id").eq("staff_id", staff["id"])
+        if gte_date:
+            query = query.gte("created_at", gte_date)
+        rows = query.execute().data
+        ids = {r.get("tracking_id") or r.get("bag_id") for r in rows if r.get("tracking_id") or r.get("bag_id")}
+        return len(ids)
 
-    today_str = datetime.now(timezone.utc).date().isoformat()
-    today_res = (
-        admin.table("tracking_events")
-        .select("id", count="exact")
-        .eq("staff_id", staff["id"])
-        .gte("created_at", today_str)
-        .execute()
-    )
-    today_count = today_res.count or 0
+    total_count = _distinct_touch_count()
+    today_count = _distinct_touch_count(datetime.now(timezone.utc).date().isoformat())
 
     staff_row = fetch_one(admin.table("staff").select("error_points").eq("id", staff["id"]).maybe_single())
     error_points = staff_row.get("error_points", 0) if staff_row else staff.get("error_points", 0)

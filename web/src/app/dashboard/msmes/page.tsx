@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { type MsmeDetail, type MsmeSummary, api } from "@/lib/api";
+import { type MsmeDetail, type MsmeSummary, type StaffLookup, api } from "@/lib/api";
 import { useDashboard } from "@/lib/dashboardContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuthStore } from "@/lib/store/auth";
@@ -68,9 +68,20 @@ function MsmeCard({ msme, onOpen }: { msme: MsmeSummary; onOpen: () => void }) {
 function MsmeDetailView({ msmeId, accessToken, previewHubId, onBack }: { msmeId: string; accessToken: string; previewHubId: string | null; onBack: () => void }) {
   const { t } = useTranslation();
   const [detail, setDetail] = useState<MsmeDetail | null>(null);
+  const [staffById, setStaffById] = useState<Record<string, StaffLookup>>({});
 
   useEffect(() => {
-    api.getMsmeDetail(accessToken, msmeId, previewHubId).then(setDetail);
+    setDetail(null);
+    setStaffById({});
+    api.getMsmeDetail(accessToken, msmeId, previewHubId).then((d) => {
+      setDetail(d);
+      const staffIds = Array.from(new Set(d.shipments.map((s) => s.assigned_staff_id).filter((id): id is string => !!id)));
+      if (staffIds.length > 0) {
+        api.staffLookup(accessToken, staffIds).then((rows) => {
+          setStaffById(Object.fromEntries(rows.map((r) => [r.id, r])));
+        });
+      }
+    });
   }, [accessToken, msmeId, previewHubId]);
 
   return (
@@ -123,18 +134,47 @@ function MsmeDetailView({ msmeId, accessToken, previewHubId, onBack }: { msmeId:
               <p className="text-navy/40">{t.msmes.noShipmentsYet}</p>
             ) : (
               <div className="flex flex-col gap-2">
-                {detail.shipments.map((s) => (
-                  <div key={s.tracking_id} className="flex items-center justify-between rounded-lg border border-navy/10 px-3 py-2 text-sm">
-                    <div>
-                      <span className="font-mono text-navy">{s.tracking_id}</span>
-                      {s.recipient_name ? <span className="ml-2 text-navy/50">{s.recipient_name}</span> : null}
+                {detail.shipments.map((s) => {
+                  const assignedStaff = s.assigned_staff_id ? staffById[s.assigned_staff_id] : null;
+                  return (
+                    <div key={s.tracking_id} className="rounded-lg border border-navy/10 px-3 py-2.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-mono text-navy">{s.tracking_id}</span>
+                          {s.recipient_name ? <span className="ml-2 text-navy/50">{s.recipient_name}</span> : null}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {s.declared_value ? <span className="font-mono text-navy/40">{formatMoney(s.declared_value)}</span> : null}
+                          <span className={`font-semibold ${STATUS_COLOR[s.status] ?? "text-navy/60"}`}>{s.status}</span>
+                        </div>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-navy/45">
+                        <span>
+                          {t.msmes.assignedTo}: {assignedStaff ? `${assignedStaff.name ?? assignedStaff.phone} (${t.roles[assignedStaff.role as keyof typeof t.roles] ?? assignedStaff.role})` : t.msmes.unassigned}
+                        </span>
+                        {s.delivery_pincode ? (
+                          <span>
+                            {t.msmes.pincode}: {s.delivery_pincode}
+                          </span>
+                        ) : null}
+                        {s.weight_grams ? (
+                          <span>
+                            {t.msmes.weight}: {s.weight_grams}g
+                          </span>
+                        ) : null}
+                        <span>{s.current_bag_id ? `${t.msmes.currentBag}: ${s.current_bag_id}` : t.msmes.notBagged}</span>
+                        <span>
+                          {t.msmes.created}: {formatDate(s.created_at)}
+                        </span>
+                        {s.delivered_at ? (
+                          <span>
+                            {t.msmes.deliveredOn}: {formatDate(s.delivered_at)}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {s.declared_value ? <span className="font-mono text-navy/40">{formatMoney(s.declared_value)}</span> : null}
-                      <span className={`font-semibold ${STATUS_COLOR[s.status] ?? "text-navy/60"}`}>{s.status}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

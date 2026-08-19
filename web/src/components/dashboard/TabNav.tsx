@@ -15,6 +15,7 @@ export function TabNav() {
     { href: "/dashboard/staff", label: t.nav.staff },
     { href: "/dashboard/network", label: t.nav.network },
     { href: "/dashboard/msmes", label: t.nav.msmes },
+    { href: "/dashboard/search", label: t.nav.search },
   ];
 
   return (

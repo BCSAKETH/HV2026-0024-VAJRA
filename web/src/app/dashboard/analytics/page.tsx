@@ -61,6 +61,7 @@ export default function AnalyticsPage() {
   const maxCount = Math.max(1, ...Object.values(breakdown));
   const totalCounted = Object.values(breakdown).reduce((a, b) => a + b, 0);
   const maxDefenseCount = Math.max(1, ...(analytics?.defenses.map((d) => d.count) ?? [1]));
+  const maxTrendCount = Math.max(1, ...(analytics?.qr_generation.trend_7d.map((d) => d.tracking_count + d.bag_count) ?? [1]));
 
   const defenseNotes: Record<number, string | undefined> = {
     4: t.analytics.defenseNoteTransitLeakage,
@@ -98,6 +99,8 @@ export default function AnalyticsPage() {
             sub={`${t.analytics.ofTotal} ${formatMoney(analytics.value_risk.total_declared_value)} ${t.analytics.total}`}
             accent="indigo"
           />
+          <StatCard label={t.analytics.todayQrTracking} value={analytics.qr_generation.today_tracking} accent="orange" />
+          <StatCard label={t.analytics.todayQrBag} value={analytics.qr_generation.today_bag} accent="indigo" />
         </div>
       ) : null}
 
@@ -208,6 +211,60 @@ export default function AnalyticsPage() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
+          <p className="mb-1 font-serif text-xl text-navy">{t.analytics.qrGenerationTitle}</p>
+          <p className="mb-5 text-sm text-navy/50">{t.analytics.qrGenerationSub}</p>
+
+          {!analytics ? (
+            <p className="text-navy/40">…</p>
+          ) : (
+            <>
+              <div className="mb-4 flex gap-6 text-sm">
+                <span className="text-navy">
+                  <span className="font-mono font-semibold text-navy">{analytics.qr_generation.total_tracking}</span> {t.analytics.trackingIds} · {t.analytics.allTime}
+                </span>
+                <span className="text-navy">
+                  <span className="font-mono font-semibold text-navy">{analytics.qr_generation.total_bag}</span> {t.analytics.bagIds} · {t.analytics.allTime}
+                </span>
+              </div>
+
+              {analytics.qr_generation.by_hub.length > 0 ? (
+                <div className="mb-4 flex flex-col gap-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t.analytics.byHub}</p>
+                  {analytics.qr_generation.by_hub.map((h) => (
+                    <div key={h.hub_name} className="flex items-center justify-between text-sm">
+                      <span className="text-navy">{h.hub_name}</span>
+                      <span className="font-mono text-navy/50">
+                        {h.tracking_count} {t.analytics.trackingIds} · {h.bag_count} {t.analytics.bagIds}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-navy/50">{t.analytics.trend7d}</p>
+              {analytics.qr_generation.trend_7d.every((d) => d.tracking_count + d.bag_count === 0) ? (
+                <p className="text-sm text-navy/40">{t.analytics.noQrGenerationYet}</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {analytics.qr_generation.trend_7d.map((d) => (
+                    <div key={d.date} className="flex items-center gap-3">
+                      <span className="w-16 shrink-0 font-mono text-xs text-navy/40">
+                        {new Date(d.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
+                      <div className="flex h-2.5 flex-1 overflow-hidden rounded-full bg-navy/5">
+                        <div className="h-full bg-orange" style={{ width: `${(d.tracking_count / maxTrendCount) * 100}%` }} />
+                        <div className="h-full bg-indigo" style={{ width: `${(d.bag_count / maxTrendCount) * 100}%` }} />
+                      </div>
+                      <span className="w-10 shrink-0 text-right font-mono text-xs text-navy">{d.tracking_count + d.bag_count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

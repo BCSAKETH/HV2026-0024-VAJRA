@@ -69,6 +69,7 @@ export interface Shipment {
   current_bag_id: string | null;
   assigned_staff_id: string | null;
   created_at: string;
+  delivered_at: string | null;
 }
 
 export interface StaffManifest {
@@ -133,6 +134,27 @@ export interface RoutingGap {
   shipment_count: number;
 }
 
+export interface QrGenerationHubEntry {
+  hub_name: string;
+  tracking_count: number;
+  bag_count: number;
+}
+
+export interface QrGenerationTrendEntry {
+  date: string;
+  tracking_count: number;
+  bag_count: number;
+}
+
+export interface QrGenerationStats {
+  today_tracking: number;
+  today_bag: number;
+  total_tracking: number;
+  total_bag: number;
+  by_hub: QrGenerationHubEntry[];
+  trend_7d: QrGenerationTrendEntry[];
+}
+
 export interface MsmeSummary {
   id: string;
   business_name: string;
@@ -167,6 +189,7 @@ export interface AnalyticsOut {
   value_risk: ValueRiskStats;
   msme_stats: MsmeStats;
   routing_gaps: RoutingGap[];
+  qr_generation: QrGenerationStats;
 }
 
 export const HUB_MANAGER_CREATABLE_ROLES: StaffRole[] = ["QR_PASTER", "BILL_SCANNER", "CONSOLIDATOR", "LINE_HAUL", "LAST_MILE"];
@@ -206,6 +229,66 @@ export interface StaffLookup {
   role: string;
   error_points: number;
 }
+
+export interface PrinterItem {
+  id: string;
+  shortcode: string;
+  created_at: string;
+  generated_by_hub_name: string | null;
+}
+
+export interface PrinterHistoryItem {
+  id: string;
+  shortcode: string;
+  type: "PARCEL" | "BAG";
+  created_at: string;
+}
+
+export interface SearchTimelineEvent {
+  event_type: string;
+  lat: number | null;
+  lng: number | null;
+  created_at: string;
+  staff_name: string | null;
+  staff_role: string | null;
+}
+
+export interface SearchTrackingParcel {
+  result_type: "PARCEL";
+  tracking_id: string;
+  shortcode: string;
+  status: string;
+  status_confidence: string;
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  delivery_address: string | null;
+  delivery_pincode: string | null;
+  weight_grams: number | null;
+  declared_value: number | null;
+  tamper_seal_id: string | null;
+  condition_photo_urls: string[];
+  current_bag_id: string | null;
+  assigned_staff_name: string | null;
+  assigned_staff_role: string | null;
+  created_at: string;
+  delivered_at: string | null;
+  timeline: SearchTimelineEvent[];
+}
+
+export interface SearchTrackingBag {
+  result_type: "BAG";
+  bag_id: string;
+  shortcode: string;
+  status: string;
+  origin_hub_name: string | null;
+  destination_hub_name: string | null;
+  expected_weight: number;
+  actual_weight: number | null;
+  child_count: number;
+  timeline: SearchTimelineEvent[];
+}
+
+export type SearchTrackingResult = SearchTrackingParcel | SearchTrackingBag;
 
 export interface Bottleneck {
   bag_id: string;
@@ -280,11 +363,22 @@ export const api = {
     }),
 
   generateQr: (accessToken: string, type: "PARCEL" | "BAG") =>
-    request<{ type: string; item: { id: string; shortcode: string } }>(
+    request<{ type: string; item: PrinterItem }>(
       "/printer/generate",
       { method: "POST", body: JSON.stringify({ type }) },
       accessToken
     ),
+
+  searchTracking: (accessToken: string, code: string) =>
+    request<SearchTrackingResult>(`/admin/search-tracking?code=${encodeURIComponent(code)}`, undefined, accessToken),
+
+  getPrinterHistory: (accessToken: string, from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    const qs = params.toString();
+    return request<PrinterHistoryItem[]>(`/printer/history${qs ? `?${qs}` : ""}`, undefined, accessToken);
+  },
 
   listHubs: (accessToken: string) => request<Hub[]>("/hubs", undefined, accessToken),
 
