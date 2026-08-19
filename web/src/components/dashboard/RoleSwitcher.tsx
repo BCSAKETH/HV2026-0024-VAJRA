@@ -17,7 +17,7 @@ export function RoleSwitcher({ hubs, previewHubId, onChange }: Props) {
   const { t } = useTranslation();
 
   return (
-    <div className="mb-6 flex items-center gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card">
+    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card">
       <span className="text-sm font-medium text-navy/60">{t.roleSwitcher.previewAs}</span>
       <button
         onClick={() => onChange(null)}

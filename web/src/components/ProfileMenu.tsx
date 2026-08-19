@@ -49,8 +49,20 @@ export function ProfileMenu({ hubName }: { hubName?: string | null }) {
 
       {open ? (
         <>
-          <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-card border border-navy/10 bg-white p-5 shadow-lg">
+          {/* A fully transparent click-catcher used to sit here — nothing
+              visually separated the open dropdown from the busy dashboard
+              content behind it (RoleSwitcher pills, KPI/index cards), so
+              open state read as page content "bleeding through" the menu
+              instead of a menu sitting cleanly on top of it. A dimmed,
+              blurred backdrop is the standard fix: it still closes on
+              click, but now the page behind visibly recedes while the
+              menu is open. */}
+          <button
+            aria-label="close"
+            className="fixed inset-0 z-40 cursor-default bg-navy/15 backdrop-blur-[2px]"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-card border border-navy/10 bg-white p-5 shadow-2xl">
             <p className="mb-3 font-serif text-lg text-navy">{t.profile.title}</p>
 
             <div className="mb-4 rounded-xl border border-navy/10 bg-ivory p-3">
