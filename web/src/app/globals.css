@@ -25,8 +25,69 @@
   }
 }
 
+/* Printed QR label (Printer page) — a fixed-size shipping label, not the
+   page. Hidden on screen; shown, and made the only visible content, only
+   inside @media print. Standard 4x6in label size via @page so it doesn't
+   scale to whatever paper the browser happens to default to. */
+.print-label {
+  display: none;
+}
+
 @media print {
+  @page {
+    size: 4in 6in;
+    margin: 0.15in;
+  }
+
   .no-print {
     display: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-label,
+  .print-label * {
+    visibility: visible;
+  }
+
+  .print-label {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15in;
+    color: #172b3a;
+    background: #fff;
+  }
+
+  .print-label-header {
+    display: flex;
+    align-items: center;
+    gap: 0.08in;
+    font-weight: 700;
+    font-size: 14pt;
+    letter-spacing: 0.05em;
+  }
+
+  .print-label-shortcode {
+    font-family: monospace;
+    font-size: 28pt;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+
+  .print-label-type {
+    font-size: 12pt;
+    font-weight: 600;
+  }
+
+  .print-label-meta {
+    font-family: monospace;
+    font-size: 9pt;
+    opacity: 0.6;
   }
 }

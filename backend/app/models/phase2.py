@@ -14,11 +14,20 @@ class PrinterGenerateIn(BaseModel):
 class PrinterItemOut(BaseModel):
     id: str  # tracking_id or bag_id, depending on `type`
     shortcode: str
+    created_at: str
+    generated_by_hub_name: str | None = None
 
 
 class PrinterGenerateOut(BaseModel):
     type: PrinterType
     item: PrinterItemOut
+
+
+class PrinterHistoryItemOut(BaseModel):
+    id: str
+    shortcode: str
+    type: PrinterType
+    created_at: str
 
 
 # ---- OCR ----
@@ -80,6 +89,7 @@ class ShipmentOut(BaseModel):
     current_bag_id: str | None
     assigned_staff_id: str | None
     created_at: str
+    delivered_at: str | None = None
 
 
 class ConditionPhotosOut(BaseModel):

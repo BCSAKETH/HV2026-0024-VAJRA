@@ -47,6 +47,27 @@ class RoutingGap(BaseModel):
     shipment_count: int
 
 
+class QrGenerationHubEntry(BaseModel):
+    hub_name: str
+    tracking_count: int
+    bag_count: int
+
+
+class QrGenerationTrendEntry(BaseModel):
+    date: str
+    tracking_count: int
+    bag_count: int
+
+
+class QrGenerationStats(BaseModel):
+    today_tracking: int
+    today_bag: int
+    total_tracking: int
+    total_bag: int
+    by_hub: list[QrGenerationHubEntry]
+    trend_7d: list[QrGenerationTrendEntry]
+
+
 class AnalyticsOut(BaseModel):
     scope_type: str  # "NETWORK" | "HUB"
     scope_hub_name: str | None
@@ -56,3 +77,4 @@ class AnalyticsOut(BaseModel):
     value_risk: ValueRiskStats
     msme_stats: MsmeStats
     routing_gaps: list[RoutingGap]
+    qr_generation: QrGenerationStats

@@ -4,6 +4,7 @@ from typing import Annotated
 from dateutil import parser as dateparser
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.bags import child_count as _child_count
 from app.core.bottleneck_scanner import compute_bottlenecks
 from app.core.hub_scope import AVG_TRUCK_SPEED_KMH, DELAY_THRESHOLD_MULTIPLIER, resolve_scope_hub_id
 from app.core.security import require_roles
@@ -11,7 +12,19 @@ from app.core.staff_provisioning import delete_auth_user, get_or_create_auth_use
 from app.core.supabase_client import fetch_one, get_admin_client
 from app.core.velocity import haversine_km
 from app.models.network_admin import CreateHubIn, CreatePincodeRouteIn, HubOut, PincodeRouteOut
-from app.models.phase5 import ActiveTransit, BottleneckOut, HubPoint, KpiOut, KpiScope, SecurityEvent, StaffLookupOut
+from app.models.phase5 import (
+    ActiveTransit,
+    BottleneckOut,
+    HubPoint,
+    KpiOut,
+    KpiScope,
+    SearchTimelineEvent,
+    SearchTrackingBagOut,
+    SearchTrackingOut,
+    SearchTrackingParcelOut,
+    SecurityEvent,
+    StaffLookupOut,
+)
 from app.models.staff_admin import HUB_MANAGER_CREATABLE_ROLES, CreateStaffIn, StaffOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -298,3 +311,102 @@ def delete_pincode_route(pincode: str, staff: Annotated[dict, Depends(require_ro
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only remove routes pointing to your own hub.")
 
     admin.table("pincode_routes").delete().eq("pincode", pincode).execute()
+
+
+# ---------------------------------------------------------------------------
+# Search Tracking (req. 5): Hub Manager / Super Admin enter any code — real
+# tracking_id, real bag_id, or the 6-char shortcode of either — and get the
+# full authenticated detail + timeline. Same shortcode-first dual-lookup
+# pattern as track.py's public endpoint, just tried against both tables.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_staff(admin, staff_id: str | None) -> tuple[str | None, str | None]:
+    if not staff_id:
+        return None, None
+    row = fetch_one(admin.table("staff").select("name,phone,role").eq("id", staff_id).maybe_single())
+    if not row:
+        return None, None
+    return row.get("name") or row["phone"], row["role"]
+
+
+def _events_to_timeline(admin, rows: list[dict]) -> list[SearchTimelineEvent]:
+    staff_ids = {r["staff_id"] for r in rows if r.get("staff_id")}
+    staff_map: dict[str, tuple[str | None, str | None]] = {}
+    if staff_ids:
+        for row in admin.table("staff").select("id,name,phone,role").in_("id", list(staff_ids)).execute().data:
+            staff_map[row["id"]] = (row.get("name") or row["phone"], row["role"])
+    return [
+        SearchTimelineEvent(
+            event_type=e["event_type"],
+            lat=e.get("lat"),
+            lng=e.get("lng"),
+            created_at=e["created_at"],
+            staff_name=staff_map.get(e.get("staff_id"), (None, None))[0],
+            staff_role=staff_map.get(e.get("staff_id"), (None, None))[1],
+        )
+        for e in sorted(rows, key=lambda e: e["created_at"])
+    ]
+
+
+def _parcel_timeline(admin, shipment: dict) -> list[SearchTimelineEvent]:
+    own_events = admin.table("tracking_events").select("*").eq("tracking_id", shipment["tracking_id"]).execute().data
+    bag_ids = {e["bag_id"] for e in own_events if e.get("bag_id")}
+    if shipment.get("current_bag_id"):
+        bag_ids.add(shipment["current_bag_id"])
+    bag_departed = (
+        admin.table("tracking_events").select("*").in_("bag_id", list(bag_ids)).eq("event_type", "DEPARTED").execute().data if bag_ids else []
+    )
+    return _events_to_timeline(admin, own_events + bag_departed)
+
+
+@router.get("/search-tracking", response_model=SearchTrackingOut)
+def search_tracking(code: str, staff: Annotated[dict, Depends(require_roles(*_ROLES))]):
+    admin = get_admin_client()
+    normalized = code.strip()
+
+    shipment = fetch_one(admin.table("shipments").select("*").eq("shortcode", normalized.upper()).maybe_single())
+    if not shipment:
+        shipment = fetch_one(admin.table("shipments").select("*").eq("tracking_id", normalized).maybe_single())
+    if shipment:
+        assigned_name, assigned_role = _resolve_staff(admin, shipment.get("assigned_staff_id"))
+        return SearchTrackingParcelOut(
+            tracking_id=shipment["tracking_id"],
+            shortcode=shipment["shortcode"],
+            status=shipment["status"],
+            status_confidence=shipment["status_confidence"],
+            recipient_name=shipment.get("recipient_name"),
+            recipient_phone=shipment.get("recipient_phone"),
+            delivery_address=shipment.get("delivery_address"),
+            delivery_pincode=shipment.get("delivery_pincode"),
+            weight_grams=shipment.get("weight_grams"),
+            declared_value=shipment.get("declared_value"),
+            tamper_seal_id=shipment.get("tamper_seal_id"),
+            condition_photo_urls=shipment.get("condition_photo_urls") or [],
+            current_bag_id=shipment.get("current_bag_id"),
+            assigned_staff_name=assigned_name,
+            assigned_staff_role=assigned_role,
+            created_at=shipment["created_at"],
+            delivered_at=shipment.get("delivered_at"),
+            timeline=_parcel_timeline(admin, shipment),
+        )
+
+    bag = fetch_one(admin.table("master_bags").select("*").eq("shortcode", normalized.upper()).maybe_single())
+    if not bag:
+        bag = fetch_one(admin.table("master_bags").select("*").eq("bag_id", normalized).maybe_single())
+    if bag:
+        hub_names = {h["id"]: h["name"] for h in admin.table("hubs").select("id,name").execute().data}
+        bag_events = admin.table("tracking_events").select("*").eq("bag_id", bag["bag_id"]).execute().data
+        return SearchTrackingBagOut(
+            bag_id=bag["bag_id"],
+            shortcode=bag["shortcode"],
+            status=bag["status"],
+            origin_hub_name=hub_names.get(bag.get("origin_hub_id")),
+            destination_hub_name=hub_names.get(bag.get("destination_hub_id")),
+            expected_weight=bag.get("expected_weight") or 0,
+            actual_weight=bag.get("actual_weight"),
+            child_count=_child_count(admin, bag["bag_id"]),
+            timeline=_events_to_timeline(admin, bag_events),
+        )
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No tracking ID, bag ID, or shortcode matches that code.")
