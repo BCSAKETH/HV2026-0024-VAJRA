@@ -90,6 +90,52 @@ function BoxGroup({ variant, openProgress, accentColor }: { variant: Variant; op
   );
 }
 
+/** Procedural, flat-shaded courier figure — confirmed direction was "reads
+ * as a simplified mascot, not an illustrated character" (no sprite art, no
+ * rigged/animated model, zero external assets — same reasoning as the box
+ * itself). Purely additive: doesn't read or touch BoxGroup/Lid/GlowDot at
+ * all, so it can't regress anything already shipped. A gentle idle bob is
+ * its only animation — no walk cycle, matching the earlier-agreed "v1
+ * doesn't need one, a stationary figure reads fine" call. */
+function CourierFigure() {
+  // Legs are a 0.36-tall box centered at local y=0.12, scaled by 0.62 —
+  // their bottom edge sits at (0.12 - 0.18) * 0.62 ≈ -0.037 relative to
+  // this group's own origin. ContactShadows (the floor plane) is at
+  // y=-0.62, so the group itself needs to sit at -0.62 - (-0.037) ≈ -0.583
+  // for the feet to actually touch the ground instead of floating above it.
+  const GROUND_Y = -0.583;
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    groupRef.current.position.y = GROUND_Y + Math.sin(clock.getElapsedTime() * 1.1) * 0.025;
+  });
+
+  return (
+    <group ref={groupRef} position={[1.35, GROUND_Y, -0.3]} rotation={[0, -0.3, 0]} scale={0.62}>
+      {/* head */}
+      <mesh position={[0, 1.05, 0]} castShadow>
+        <sphereGeometry args={[0.22, 20, 20]} />
+        <meshStandardMaterial color="#E0B98A" roughness={0.85} />
+      </mesh>
+      {/* body */}
+      <mesh position={[0, 0.62, 0]} castShadow>
+        <boxGeometry args={[0.44, 0.62, 0.28]} />
+        <meshStandardMaterial color="#6B8F71" roughness={0.9} />
+      </mesh>
+      {/* legs */}
+      <mesh position={[0, 0.12, 0]} castShadow>
+        <boxGeometry args={[0.4, 0.36, 0.26]} />
+        <meshStandardMaterial color="#172B3A" roughness={0.9} />
+      </mesh>
+      {/* arm, raised slightly as if scanning/gesturing toward the box */}
+      <mesh position={[-0.3, 0.72, 0.05]} rotation={[0, 0, 0.5]} castShadow>
+        <boxGeometry args={[0.34, 0.13, 0.13]} />
+        <meshStandardMaterial color="#6B8F71" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
 function useWebglSupport() {
   const [supported, setSupported] = useState<boolean | null>(null);
   useEffect(() => {
@@ -176,6 +222,7 @@ export function PackageBoxScene({
           <Float speed={reducedMotion ? 0 : 1.4} rotationIntensity={reducedMotion ? 0 : 0.15} floatIntensity={reducedMotion ? 0 : 0.5}>
             <BoxGroup variant={effectiveVariant} openProgress={reducedMotion ? 1 : openProgress} accentColor={accentColor} />
           </Float>
+          <CourierFigure />
 
           <ContactShadows position={[0, -0.62, 0]} opacity={0.35} scale={4} blur={2.4} far={2} />
         </Canvas>
