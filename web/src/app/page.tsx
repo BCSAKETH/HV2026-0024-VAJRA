@@ -281,7 +281,9 @@ function useCinematicScroll() {
   const wordmarkRef = useRef<HTMLDivElement>(null);
   const wordmarkBoxRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const scanRef = useRef<HTMLDivElement>(null);
   const [revealProgress, setRevealProgress] = useState(0);
+  const [scanProgress, setScanProgress] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -289,8 +291,10 @@ function useCinematicScroll() {
     setReducedMotion(reduced);
     if (reduced) {
       // "Fall back to clean static stills" — the box just sits fully open,
-      // headline fully visible, no pin/scrub at all.
+      // headline fully visible, and the scan sequence lands on its final
+      // (verified) frame, no pin/scrub at all.
       setRevealProgress(1);
+      setScanProgress(1);
       return;
     }
 
@@ -365,6 +369,20 @@ function useCinematicScroll() {
           );
         }
 
+        if (scanRef.current) {
+          ScrollTrigger.create({
+            trigger: scanRef.current,
+            start: "top top",
+            end: "+=900",
+            pin: true,
+            scrub: 1,
+            onUpdate: (self) => {
+              const rounded = Math.round(self.progress * 100) / 100;
+              setScanProgress((prev) => (prev === rounded ? prev : rounded));
+            },
+          });
+        }
+
         gsap.utils.toArray<HTMLElement>(".fade-up").forEach((el) => {
           gsap.fromTo(
             el,
@@ -388,7 +406,18 @@ function useCinematicScroll() {
     return () => ctx?.revert();
   }, []);
 
-  return { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, progressBarRef, revealProgress, reducedMotion };
+  return {
+    rootRef,
+    revealRef,
+    revealHeadlineRef,
+    wordmarkRef,
+    wordmarkBoxRef,
+    progressBarRef,
+    scanRef,
+    revealProgress,
+    scanProgress,
+    reducedMotion,
+  };
 }
 
 export default function Home() {
@@ -398,7 +427,8 @@ export default function Home() {
   const staff = useAuthStore((s) => s.staff);
   const { heroRef, backdropRef, boxRef, headlineRef } = useParallaxHero();
   const { wrapRef: boxWrapRef, openProgress, variant: boxVariant } = useInteractiveBox();
-  const { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, progressBarRef, revealProgress } = useCinematicScroll();
+  const { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, progressBarRef, scanRef, revealProgress, scanProgress } =
+    useCinematicScroll();
 
   // `/` never auto-redirects away, in either direction — a stale session
   // sitting in a normal browser (from earlier testing, or just not having
@@ -454,7 +484,7 @@ export default function Home() {
           colors meeting in one soft glow behind the headline. Mouse motion
           drives three layers (backdrop, floating box, headline) at three
           different speeds/directions for a real parallax-depth feel. */}
-      <section ref={heroRef} className="relative overflow-hidden">
+      <section ref={heroRef} className="relative flex min-h-[92vh] items-center overflow-hidden">
         <div
           ref={backdropRef}
           className="pointer-events-none absolute inset-0 opacity-[0.16] transition-transform duration-300 ease-out"
@@ -463,20 +493,35 @@ export default function Home() {
               "radial-gradient(50% 60% at 18% 12%, #4F46E5, transparent), radial-gradient(45% 55% at 85% 8%, #E76F2F, transparent), radial-gradient(55% 50% at 60% 55%, #6B8F71, transparent)",
           }}
         />
-        <div className="relative mx-auto grid max-w-6xl gap-10 px-6 pb-16 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:pt-16">
+        {/* Faint dot grid filling the wide side gutters either side of the
+            max-w-6xl content column on large screens — pure CSS, no asset —
+            so the far left/right edges read as "designed empty space"
+            instead of literally nothing. Fades out toward the content so it
+            never competes with the headline or the box. */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          aria-hidden="true"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(23,43,58,0.14) 1.5px, transparent 1.5px)",
+            backgroundSize: "28px 28px",
+            maskImage: "radial-gradient(80% 70% at 50% 45%, transparent 40%, black 92%)",
+            WebkitMaskImage: "radial-gradient(80% 70% at 50% 45%, transparent 40%, black 92%)",
+          }}
+        />
+        <div className="relative mx-auto grid w-full max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
             <p className="mb-4 rounded-full border border-orange/25 bg-orange/10 px-4 py-1.5 font-mono text-xs uppercase tracking-[0.3em] text-orange">
               {t.landing.tagline}
             </p>
             <h1
               ref={headlineRef}
-              className="mb-6 text-balance font-serif text-5xl leading-tight text-navy transition-transform duration-300 ease-out sm:text-6xl"
+              className="mb-6 text-balance font-serif text-5xl leading-tight text-navy transition-transform duration-300 ease-out sm:text-6xl lg:text-7xl"
             >
               {t.login.title}
             </h1>
             <p className="mb-10 max-w-xl text-balance text-lg leading-relaxed text-navy/65">{t.landing.pitch}</p>
 
-            <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row">
+            <div className="mb-8 flex flex-col items-center gap-3 sm:flex-row">
               <Link
                 href={primaryHref}
                 className="w-full rounded-xl bg-gradient-to-br from-indigo to-[#3730A3] px-8 py-3.5 text-center font-semibold text-white shadow-lg shadow-indigo/30 transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto"
@@ -485,6 +530,19 @@ export default function Home() {
               </Link>
               <TrackForm />
             </div>
+
+            {/* Fills the empty strip under the CTA row on wide screens with
+                real information instead of blank space — the same stat
+                copy used further down the page, pulled forward as a quick
+                trust signal right in the hero's line of sight. */}
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 lg:justify-start">
+              {STATS.map((key) => (
+                <div key={key} className="flex items-center gap-1.5 font-mono text-xs text-navy/40">
+                  <span>{STAT_ICONS[key]}</span>
+                  <span>{t.landing[key]}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* The signature scene: a real, procedural (zero external assets)
@@ -492,7 +550,7 @@ export default function Home() {
               nesting: the outer div (boxRef) drifts with the wide hero
               parallax; the inner div (boxWrapRef) tilts/drags on its own
               hover/pointer input and click-toggles open via openProgress. */}
-          <div ref={boxRef} className="mx-auto h-[280px] w-full max-w-md transition-transform duration-300 ease-out sm:h-[360px]">
+          <div ref={boxRef} className="mx-auto h-[380px] w-full max-w-lg transition-transform duration-300 ease-out sm:h-[460px] lg:h-[560px]">
             <div
               ref={boxWrapRef}
               className="h-full w-full cursor-grab touch-none select-none transition-transform duration-150 ease-out active:cursor-grabbing"
@@ -512,15 +570,39 @@ export default function Home() {
           what that prop was documented for. One restrained accent
           (indigo) only, per the brief. */}
       <section ref={revealRef} className="relative flex min-h-screen items-center overflow-hidden bg-ivory">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-6 lg:grid-cols-2">
-          <div className="order-2 mx-auto h-[300px] w-full max-w-md sm:h-[380px] lg:order-1">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.12]"
+          aria-hidden="true"
+          style={{
+            background:
+              "radial-gradient(45% 55% at 8% 20%, #6B8F71, transparent), radial-gradient(50% 45% at 95% 85%, #4F46E5, transparent)",
+          }}
+        />
+        <div className="relative mx-auto grid w-full max-w-6xl items-center gap-6 px-6 lg:grid-cols-2">
+          <div className="order-2 mx-auto h-[360px] w-full max-w-lg sm:h-[460px] lg:order-1 lg:h-[560px]">
             <PackageBoxScene variant={revealProgress > 0.02 ? "scroll" : "idle"} openProgress={revealProgress} accentColor="#4F46E5" height="100%" />
           </div>
           <div className="order-1 text-center lg:order-2 lg:text-left">
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.35em] text-indigo/70">{t.landing.revealKicker}</p>
-            <h2 ref={revealHeadlineRef} className="text-balance font-serif text-4xl leading-tight text-navy sm:text-5xl">
+            <h2 ref={revealHeadlineRef} className="mb-8 text-balance font-serif text-4xl leading-tight text-navy sm:text-5xl">
               {t.landing.revealHeadline}
             </h2>
+            {/* Reveal progress made visible as real UI, not just tracked in
+                state — a thin tracker bar plus a live percentage readout,
+                so this half of the section isn't just a headline floating
+                in space while the box does all the work on the other
+                side. */}
+            <div className="mx-auto flex max-w-xs flex-col gap-2 lg:mx-0">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-navy/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-indigo to-sage transition-[width] duration-150 ease-out"
+                  style={{ width: `${Math.round(revealProgress * 100)}%` }}
+                />
+              </div>
+              <p className="font-mono text-xs uppercase tracking-widest text-navy/40">
+                {Math.round(revealProgress * 100)}% {t.landing.boxHint}
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -551,40 +633,94 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SCAN TO VERIFY — a stylized phone scanning a QR, then resolving to
-          a "Delivered & Verified" confirmation. Pure CSS/DOM (no canvas,
-          no 3D) — the QR pattern is a fixed grid of divs with three
-          corner "finder" squares, same visual grammar as a real QR
-          without needing one to actually be scannable (it's illustrative,
-          same principle as qrTexture.ts's canvas-drawn one on the box
-          itself). Scroll-triggered once via .fade-up plus a CSS keyframe
-          sweep on the scan line — no new GSAP wiring needed. */}
-      <section className="fade-up mx-auto max-w-md px-6 py-20 text-center sm:px-10">
-        <p className="mb-8 font-mono text-xs uppercase tracking-[0.3em] text-indigo/70">{t.landing.scanKicker}</p>
-        <div className="relative mx-auto mb-6 w-64 rounded-[2rem] border-4 border-navy/80 bg-white p-4 shadow-2xl">
-          <div className="relative overflow-hidden rounded-xl bg-navy/5 p-3">
-            <div className="grid grid-cols-8 gap-[3px]">
-              {QR_PATTERN.map((row, y) =>
-                row.map((filled, x) => {
-                  const isFinder = (x < 2 && y < 2) || (x > 5 && y < 2) || (x < 2 && y > 5);
-                  return (
-                    <div
-                      key={`${x}-${y}`}
-                      className={`aspect-square rounded-[1px] ${isFinder || filled ? "bg-navy" : "bg-transparent"}`}
-                    />
-                  );
-                })
-              )}
+      {/* SCAN TO VERIFY — pinned + scroll-scrubbed, same technique as the
+          Reveal and Wordmark sections above (a ScrollTrigger already wired
+          up in useCinematicScroll driving scanProgress). A real phone frame
+          (bezel + notch + screen) actually does the scanning: the QR +
+          sweeping scan-line live on the phone's screen and fade out as
+          scanProgress crosses the midpoint, while the "Delivered &
+          Verified" badge fades/scales in on that SAME screen past it — one
+          continuous scroll-driven moment instead of a QR graphic sitting
+          next to an always-visible badge. */}
+      <section ref={scanRef} className="relative flex min-h-screen items-center overflow-hidden bg-ivory">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.12]"
+          aria-hidden="true"
+          style={{
+            background:
+              "radial-gradient(50% 50% at 90% 15%, #E76F2F, transparent), radial-gradient(45% 50% at 5% 90%, #4F46E5, transparent)",
+          }}
+        />
+        <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-6 lg:grid-cols-2">
+          <div className="order-2 text-center lg:order-1 lg:text-left">
+            <p className="mb-4 font-mono text-xs uppercase tracking-[0.3em] text-indigo/70">{t.landing.scanKicker}</p>
+            <h2 className="mb-6 text-balance font-serif text-4xl leading-tight text-navy sm:text-5xl">
+              {scanProgress > 0.55 ? t.landing.scanVerifiedHeading : t.landing.scanKicker}
+            </h2>
+            <p className="mx-auto max-w-md text-balance text-lg leading-relaxed text-navy/60 lg:mx-0">
+              {scanProgress > 0.55 ? t.landing.scanVerifiedSub : t.landing.pitch}
+            </p>
+            <div className="mx-auto mt-8 flex max-w-xs flex-col gap-2 lg:mx-0">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-navy/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-orange to-sage transition-[width] duration-150 ease-out"
+                  style={{ width: `${Math.round(scanProgress * 100)}%` }}
+                />
+              </div>
+              <p className="font-mono text-xs uppercase tracking-widest text-navy/40">
+                {scanProgress > 0.55 ? "✅" : "📡"} {Math.round(scanProgress * 100)}%
+              </p>
             </div>
-            <div className="scan-line pointer-events-none absolute inset-x-0 h-0.5 bg-orange shadow-[0_0_8px_2px_rgba(231,111,47,0.6)]" />
           </div>
-          <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-navy/40">TRK-000482</p>
-        </div>
-        <div className="inline-flex items-center gap-2 rounded-2xl border border-sage/30 bg-sage/10 px-5 py-3">
-          <span className="text-lg">✅</span>
-          <div className="text-left">
-            <p className="text-sm font-semibold text-sage">{t.landing.scanVerifiedHeading}</p>
-            <p className="text-xs text-navy/50">{t.landing.scanVerifiedSub}</p>
+
+          <div className="order-1 mx-auto lg:order-2">
+            {/* Phone bezel */}
+            <div className="relative mx-auto w-[260px] rounded-[2.75rem] border-[6px] border-navy bg-navy p-2.5 shadow-2xl sm:w-[300px]">
+              <div className="pointer-events-none absolute left-1/2 top-2.5 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-navy" aria-hidden="true" />
+              {/* Screen */}
+              <div className="relative aspect-[9/19] w-full overflow-hidden rounded-[2.1rem] bg-white">
+                {/* Scanning layer */}
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 transition-opacity duration-150"
+                  style={{ opacity: Math.max(0, 1 - scanProgress * 2.2) }}
+                >
+                  <div className="relative w-full max-w-[170px] overflow-hidden rounded-xl bg-navy/5 p-3">
+                    <div className="grid grid-cols-8 gap-[3px]">
+                      {QR_PATTERN.map((row, y) =>
+                        row.map((filled, x) => {
+                          const isFinder = (x < 2 && y < 2) || (x > 5 && y < 2) || (x < 2 && y > 5);
+                          return (
+                            <div
+                              key={`${x}-${y}`}
+                              className={`aspect-square rounded-[1px] ${isFinder || filled ? "bg-navy" : "bg-transparent"}`}
+                            />
+                          );
+                        })
+                      )}
+                    </div>
+                    <div className="scan-line pointer-events-none absolute inset-x-0 h-0.5 bg-orange shadow-[0_0_8px_2px_rgba(231,111,47,0.6)]" />
+                  </div>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-navy/40">TRK-000482</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-orange">Scanning…</p>
+                </div>
+                {/* Verified layer — fades/scales in over the scanning
+                    layer as scanProgress passes the midpoint, so the badge
+                    only ever appears ON the phone's screen, and only after
+                    scrolling further into the section. */}
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white p-8 transition-opacity duration-150"
+                  style={{
+                    opacity: Math.max(0, scanProgress * 2.2 - 1.2),
+                    transform: `scale(${0.85 + Math.min(1, Math.max(0, scanProgress * 2.2 - 1.2)) * 0.15})`,
+                  }}
+                >
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-sage/15 text-4xl">✅</span>
+                  <p className="text-center font-semibold text-sage">{t.landing.scanVerifiedHeading}</p>
+                  <p className="text-center text-xs text-navy/50">{t.landing.scanVerifiedSub}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-navy/30">TRK-000482</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

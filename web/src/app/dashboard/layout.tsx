@@ -35,8 +35,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-ivory">
-      <header className="flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
+    <div className="relative min-h-screen overflow-x-hidden bg-ivory">
+      {/* Ambient fill for the wide gutters either side of every dashboard
+          page's centered content column, and the tail of short pages below
+          their last section — a fixed, full-viewport wash so it never
+          leaves a stark, empty ivory rectangle no matter how short a given
+          page's content is. Same three-color radial-gradient language as
+          the landing hero backdrop, far lower opacity since it sits behind
+          real working screens, not a hero moment. */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.07]"
+        aria-hidden="true"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 8% 0%, #4F46E5, transparent), radial-gradient(50% 45% at 100% 20%, #E76F2F, transparent), radial-gradient(55% 60% at 50% 100%, #6B8F71, transparent)",
+        }}
+      />
+      <header className="relative z-10 flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="LOCUS" width={36} height={36} className="rounded-xl" />
           <div>
@@ -49,8 +64,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <ProfileMenu />
       </header>
       <DashboardProvider>
-        <DashboardChrome />
-        {children}
+        <div className="relative z-10">
+          <DashboardChrome />
+          {children}
+        </div>
       </DashboardProvider>
     </div>
   );
