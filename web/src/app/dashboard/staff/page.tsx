@@ -310,9 +310,18 @@ export default function StaffPage() {
 
           <label className="mb-1 block text-sm font-medium text-navy">{t.staff.role}</label>
           <select value={role} onChange={(e) => setRole(e.target.value as StaffRole)} className="mb-3 w-full rounded-lg border border-navy/15 px-3 py-2 text-navy">
-            {creatableRoles.map((r) => (
-              <option key={r} value={r}>
+            {/* Every role is listed, not just the ones this staff member can
+                create — a Hub Manager should be able to see that Super Admin
+                exists as a role, just not create one, so the permission
+                boundary is legible rather than silently invisible. Disabled
+                options can never be selected (and `role` state only ever
+                changes via this element's onChange), so this is purely a
+                display change — the createStaff payload still only ever
+                contains an allowed role. */}
+            {ALL_STAFF_ROLES.map((r) => (
+              <option key={r} value={r} disabled={!creatableRoles.includes(r)}>
                 {t.roles[r]}
+                {creatableRoles.includes(r) ? "" : ` ${t.staff.notPermitted}`}
               </option>
             ))}
           </select>
