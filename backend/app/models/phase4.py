@@ -60,3 +60,8 @@ class RtoIn(BaseModel):
     staff_lat: float | None = None
     staff_lng: float | None = None
     reason: str | None = None
+
+
+class ReclaimRtoIn(BaseModel):
+    staff_lat: float | None = None
+    staff_lng: float | None = None

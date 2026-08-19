@@ -15,7 +15,7 @@ from app.core.supabase_client import fetch_one, get_admin_client
 from app.core.fast2sms import send_out_for_delivery
 from app.core.velocity import haversine_km
 from app.models.phase2 import BagOut, ShipmentOut
-from app.models.phase4 import ClaimChildIn, ClaimChildOut, DeliverIn, ManifestOut, ManifestStop, ProceedToDeliverOut, RtoIn, UnsealIn
+from app.models.phase4 import ClaimChildIn, ClaimChildOut, DeliverIn, ManifestOut, ManifestStop, ProceedToDeliverOut, ReclaimRtoIn, RtoIn, UnsealIn
 
 router = APIRouter(tags=["lastmile"])
 
@@ -277,5 +277,44 @@ def rto_shipment(tracking_id: str, payload: RtoIn, staff: Annotated[dict, Depend
     updated = admin.table("shipments").update({"status": "RTO"}).eq("tracking_id", tracking_id).execute().data[0]
     admin.table("tracking_events").insert(
         {"tracking_id": tracking_id, "event_type": "RTO", "staff_id": staff["id"], "lat": payload.staff_lat, "lng": payload.staff_lng, "meta": {"reason": payload.reason}}
+    ).execute()
+    return ShipmentOut(**updated)
+
+
+@router.post("/shipments/{tracking_id}/reclaim-rto", response_model=ShipmentOut)
+def reclaim_rto(tracking_id: str, payload: ReclaimRtoIn, staff: Annotated[dict, Depends(require_roles(*_ROLES))]) -> ShipmentOut:
+    """Real bug fix, confirmed live: RTO was treated as a dead end —
+    claim_child above hard-rejects any shipment already in DELIVERED/RTO/
+    COMPROMISED, so an RTO'd package had no way back into a delivery run at
+    all. In practice RTO isn't terminal: the package comes back to the hub
+    and gets handed out for another attempt, same as any package fresh off
+    consolidation.
+
+    This is a direct scan, deliberately not routed through
+    unseal_bag/claim_child — an RTO package sits loose at the hub, not
+    sealed inside a bag, so there's nothing to unseal. Any Last-Mile agent
+    (not necessarily the one who returned it) can reclaim it, matching how
+    a normal claim already works. Lands it in exactly the same
+    (ASSUMED_AT_HUB, HARD) state claim_child produces, so it shows up in
+    GET /agent/claimed and gets picked up by the existing
+    /agent/proceed-to-deliver flow without any changes there — same OTP
+    generation, same "out for delivery" SMS, same tracking update every
+    other package gets."""
+    admin = get_admin_client()
+    shipment = _fetch_shipment_or_404(admin, tracking_id)
+    if shipment["status"] != "RTO":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"'{tracking_id}' isn't RTO (status={shipment['status']}) — nothing to reclaim.")
+
+    update = {
+        "status": "ASSUMED_AT_HUB",
+        "status_confidence": "HARD",
+        "assigned_staff_id": staff["id"],
+        # The previous attempt's OTP is stale and must never be reusable —
+        # proceed-to-deliver always regenerates a fresh one per package.
+        "delivery_otp": None,
+    }
+    updated = admin.table("shipments").update(update).eq("tracking_id", tracking_id).execute().data[0]
+    admin.table("tracking_events").insert(
+        {"tracking_id": tracking_id, "event_type": "RECLAIMED_RTO", "staff_id": staff["id"], "lat": payload.staff_lat, "lng": payload.staff_lng}
     ).execute()
     return ShipmentOut(**updated)
