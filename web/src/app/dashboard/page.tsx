@@ -3,8 +3,9 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { KpiCards } from "@/components/dashboard/KpiCards";
 import { SecurityInbox } from "@/components/dashboard/SecurityInbox";
-import { type ActiveTransit, type Bottleneck, type SecurityEvent, type StaffLookup, api } from "@/lib/api";
+import { type ActiveTransit, type Bottleneck, type KpiOut, type SecurityEvent, type StaffLookup, api } from "@/lib/api";
 import { useDashboard } from "@/lib/dashboardContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { type RawTrackingEvent, supabaseRealtime } from "@/lib/supabaseClient";
@@ -19,6 +20,7 @@ export default function OverviewPage() {
   const { hubs, previewHubId } = useDashboard();
   const { t } = useTranslation();
 
+  const [kpis, setKpis] = useState<KpiOut | null>(null);
   const [transits, setTransits] = useState<ActiveTransit[]>([]);
   const [bottlenecks, setBottlenecks] = useState<Bottleneck[]>([]);
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
@@ -26,11 +28,13 @@ export default function OverviewPage() {
 
   const refresh = useCallback(async () => {
     if (!accessToken) return;
-    const [transitsRes, bottlenecksRes, eventsRes] = await Promise.all([
+    const [kpisRes, transitsRes, bottlenecksRes, eventsRes] = await Promise.all([
+      api.getKpis(accessToken, previewHubId),
       api.getActiveTransits(accessToken, previewHubId),
       api.getBottlenecks(accessToken, previewHubId),
       api.getSecurityEvents(accessToken, previewHubId),
     ]);
+    setKpis(kpisRes);
     setTransits(transitsRes);
     setBottlenecks(bottlenecksRes);
     setSecurityEvents(eventsRes);
@@ -80,8 +84,11 @@ export default function OverviewPage() {
 
   return (
     <main className="p-8">
+      <div className="mb-6">
+        <KpiCards kpis={kpis} />
+      </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="h-[520px] overflow-hidden rounded-card border border-navy/10 bg-white shadow-card lg:col-span-2">
+        <div className="h-[520px] overflow-hidden rounded-card border border-navy/8 bg-white shadow-card lg:col-span-2" style={{ borderTop: "3px solid #4F46E5" }}>
           {!supabaseRealtime ? (
             <div className="flex h-full items-center justify-center px-8 text-center text-navy/40">{t.overview.mapEnvHint}</div>
           ) : (
