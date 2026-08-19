@@ -154,7 +154,7 @@ export default function PrinterPage() {
 
           {current ? (
             <>
-              <div className="flex flex-col items-center rounded-card border border-navy/10 bg-white p-8 shadow-card">
+              <div className="flex flex-col items-center rounded-card border border-navy/8 bg-white p-8 shadow-card" style={{ borderTop: "3px solid #4F46E5" }}>
                 <QRCodeSVG value={current.id} size={220} />
                 <p className="mt-4 font-mono text-sm text-navy/50">{current.id}</p>
                 <p className="mt-1 font-mono text-3xl font-semibold tracking-widest text-navy">{current.shortcode}</p>

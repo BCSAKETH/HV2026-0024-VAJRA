@@ -116,9 +116,9 @@ export default function NetworkPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Hubs — Super Admin only manages; everyone can see the list */}
-        <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
+        <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #2F9E5B" }}>
           <p className="mb-4 font-serif text-xl text-navy">
-            {t.network.hubs} ({hubs.length})
+            📍 {t.network.hubs} ({hubs.length})
           </p>
           <div className="mb-5 flex flex-col gap-2">
             {hubs.map((h) => {
@@ -180,9 +180,9 @@ export default function NetworkPage() {
         </div>
 
         {/* Pincode routes — Hub Manager scoped to their own hub, Super Admin sees/edits any */}
-        <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
+        <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #3B82F6" }}>
           <p className="mb-4 font-serif text-xl text-navy">
-            {t.network.pincodeRoutes} ({routes.length})
+            🗺️ {t.network.pincodeRoutes} ({routes.length})
           </p>
           <div className="mb-5 flex max-h-80 flex-col gap-2 overflow-y-auto">
             {routes.map((r) => (

@@ -78,7 +78,7 @@ export default function SearchTrackingPage() {
         <p className="text-navy/40">{t.searchTracking.prompt}</p>
       ) : result.result_type === "PARCEL" ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
+          <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #4F46E5" }}>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="font-serif text-2xl text-navy">{result.tracking_id}</p>
@@ -121,7 +121,7 @@ export default function SearchTrackingPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
+          <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #E76F2F" }}>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="font-serif text-2xl text-navy">{result.bag_id}</p>
@@ -149,7 +149,7 @@ export default function SearchTrackingPage() {
 function TimelineCard({ timeline }: { timeline: SearchTrackingResult["timeline"] }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
+    <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #2F9E5B" }}>
       <p className="mb-4 font-serif text-xl text-navy">{t.searchTracking.timeline}</p>
       {timeline.length === 0 ? (
         <p className="text-navy/40">—</p>
