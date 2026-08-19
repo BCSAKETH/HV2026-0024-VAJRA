@@ -239,9 +239,9 @@ export default function StaffPage() {
   return (
     <main className="p-8">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-card border border-navy/10 bg-white p-6 shadow-card">
+        <div className="lg:col-span-2 rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #4F46E5" }}>
           <p className="mb-4 font-serif text-xl text-navy">
-            {t.staff.roster} {isHubManager ? t.staff.yourHub : ""} ({roster.length})
+            👥 {t.staff.roster} {isHubManager ? t.staff.yourHub : ""} ({roster.length})
           </p>
           {loading ? (
             <p className="text-navy/40">…</p>
@@ -298,8 +298,8 @@ export default function StaffPage() {
           )}
         </div>
 
-        <form onSubmit={handleCreate} className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-          <p className="mb-4 font-serif text-xl text-navy">{t.staff.addStaff}</p>
+        <form onSubmit={handleCreate} className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #E76F2F" }}>
+          <p className="mb-4 font-serif text-xl text-navy">➕ {t.staff.addStaff}</p>
           {isHubManager ? <p className="mb-4 text-sm text-navy/50">{t.staff.autoAssignedHint}</p> : null}
 
           <label className="mb-1 block text-sm font-medium text-navy">{t.staff.phone}</label>

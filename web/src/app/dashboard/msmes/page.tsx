@@ -110,26 +110,26 @@ function MsmeDetailView({ msmeId, accessToken, previewHubId, onBack }: { msmeId:
           </div>
 
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="rounded-xl border border-navy/10 bg-white p-4">
+            <div className="rounded-xl border border-navy/8 bg-white p-4 shadow-sm" style={{ borderTop: "3px solid #4F46E5" }}>
               <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.totalShipments}</p>
-              <p className="mt-1 font-serif text-2xl text-navy">{detail.total_shipments}</p>
+              <p className="mt-1 font-serif text-2xl" style={{ color: "#4F46E5" }}>{detail.total_shipments}</p>
             </div>
-            <div className="rounded-xl border border-navy/10 bg-white p-4">
+            <div className="rounded-xl border border-navy/8 bg-white p-4 shadow-sm" style={{ borderTop: "3px solid #7C3AED" }}>
               <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.totalValue}</p>
-              <p className="mt-1 font-serif text-2xl text-navy">{formatMoney(detail.total_value)}</p>
+              <p className="mt-1 font-serif text-2xl" style={{ color: "#7C3AED" }}>{formatMoney(detail.total_value)}</p>
             </div>
-            <div className="rounded-xl border border-navy/10 bg-white p-4">
+            <div className="rounded-xl border border-navy/8 bg-white p-4 shadow-sm" style={{ borderTop: "3px solid #2F9E5B" }}>
               <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.delivered}</p>
               <p className="mt-1 font-serif text-2xl text-sage">{detail.delivered_count}</p>
             </div>
-            <div className="rounded-xl border border-navy/10 bg-white p-4">
+            <div className="rounded-xl border border-navy/8 bg-white p-4 shadow-sm" style={{ borderTop: "3px solid #D6336C" }}>
               <p className="text-xs uppercase tracking-wide text-navy/50">{t.msmes.rto}</p>
               <p className="mt-1 font-serif text-2xl text-brick">{detail.rto_count}</p>
             </div>
           </div>
 
-          <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-            <p className="mb-4 font-serif text-xl text-navy">{t.msmes.shipmentHistory}</p>
+          <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #E76F2F" }}>
+            <p className="mb-4 font-serif text-xl text-navy">📦 {t.msmes.shipmentHistory}</p>
             {detail.shipments.length === 0 ? (
               <p className="text-navy/40">{t.msmes.noShipmentsYet}</p>
             ) : (

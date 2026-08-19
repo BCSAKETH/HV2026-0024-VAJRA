@@ -36,8 +36,15 @@ export default function AccountPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-ivory px-6">
-      <div className="mb-4 flex gap-1.5">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ivory px-6">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.12]"
+        style={{
+          background:
+            "radial-gradient(45% 55% at 15% 15%, #6B8F71, transparent), radial-gradient(40% 50% at 88% 12%, #4F46E5, transparent), radial-gradient(50% 45% at 50% 90%, #E76F2F, transparent)",
+        }}
+      />
+      <div className="relative mb-4 flex gap-1.5">
         {LOCALES.map((l) => (
           <button
             key={l}
@@ -51,8 +58,8 @@ export default function AccountPage() {
         ))}
       </div>
 
-      <div className="w-full max-w-sm rounded-card border border-navy/10 bg-white p-6 text-center shadow-card">
-        <Image src="/logo.png" alt="LOCUS" width={40} height={40} className="mx-auto mb-3 rounded-xl" />
+      <div className="relative w-full max-w-sm rounded-card border border-navy/8 bg-white p-6 text-center shadow-card" style={{ borderTop: "3px solid #6B8F71" }}>
+        <Image src="/logo.png" alt="LOCUS" width={40} height={40} className="mx-auto mb-3 rounded-xl shadow-sm" />
         <p className="mb-1 font-mono text-xs uppercase tracking-widest text-orange">{t.account.loggedIn}</p>
         <p className="mb-1 text-xl text-navy">{staff.name ?? staff.phone}</p>
         <p className="mb-4 text-navy/60">{t.roles[staff.role]}</p>
