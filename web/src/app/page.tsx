@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { destinationForRole } from "@/lib/roleRouting";
@@ -13,7 +13,20 @@ import { useAuthStore } from "@/lib/store/auth";
 const LOCALES: Locale[] = ["en", "te", "hi"];
 
 const STEPS = ["step1", "step2", "step3"] as const;
+const STEP_ACCENTS = ["#4F46E5", "#E76F2F", "#6B8F71"];
+const STAT_ICONS: Record<(typeof STATS)[number], string> = {
+  statDefenses: "🛡️",
+  statHubs: "📍",
+  statDelivery: "🔒",
+  statLedger: "📜",
+};
 const STATS = ["statDefenses", "statHubs", "statDelivery", "statLedger"] as const;
+const STAT_ACCENTS: Record<(typeof STATS)[number], string> = {
+  statDefenses: "#4F46E5",
+  statHubs: "#E76F2F",
+  statDelivery: "#6B8F71",
+  statLedger: "#B84A3A",
+};
 
 function TrackForm() {
   const router = useRouter();
@@ -33,12 +46,12 @@ function TrackForm() {
         value={code}
         onChange={(e) => setCode(e.target.value)}
         placeholder={t.landing.trackPlaceholder}
-        className="w-full rounded-xl border border-navy/15 bg-surface px-4 py-3 font-mono text-sm text-navy outline-none focus:border-indigo"
+        className="w-full rounded-xl border-2 border-navy/10 bg-white px-4 py-3 font-mono text-sm text-navy shadow-sm outline-none transition focus:border-indigo"
       />
       <button
         type="submit"
         disabled={!code.trim()}
-        className="shrink-0 rounded-xl border border-navy/15 bg-surface px-5 py-3 text-sm font-semibold text-navy transition hover:border-navy/30 disabled:opacity-40"
+        className="shrink-0 rounded-xl bg-navy px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-40"
       >
         {t.landing.trackButton}
       </button>
@@ -46,14 +59,28 @@ function TrackForm() {
   );
 }
 
-function LandingPage() {
+export default function Home() {
   const { t, locale, setLocale } = useTranslation();
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const staff = useAuthStore((s) => s.staff);
+
+  // `/` never auto-redirects away, in either direction — a stale session
+  // sitting in a normal browser (from earlier testing, or just not having
+  // logged out) must never silently hide the landing page again, which is
+  // exactly what happened before this fix. Instead the primary CTA just
+  // adapts: "Go to Dashboard" for a real session, "Staff Sign In" for none.
+  // `hasHydrated` gates only which of those two labels/targets we commit to
+  // — never whether the page itself renders.
+  const isAuthed = hasHydrated && Boolean(accessToken && staff);
+  const primaryHref = isAuthed && staff ? destinationForRole(staff.role) : "/login";
+  const primaryLabel = hasHydrated && isAuthed ? t.landing.goToDashboard : t.landing.staffSignIn;
 
   return (
     <main className="min-h-screen bg-ivory">
       <header className="flex items-center justify-between px-6 py-5 sm:px-10">
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="LOCUS" width={38} height={38} className="rounded-xl" />
+          <Image src="/logo.png" alt="LOCUS" width={38} height={38} className="rounded-xl shadow-sm" />
           <span className="font-serif text-2xl text-navy">{t.login.title}</span>
         </div>
         <div className="flex items-center gap-4">
@@ -63,7 +90,7 @@ function LandingPage() {
                 key={l}
                 onClick={() => setLocale(l)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                  locale === l ? "bg-indigo text-white" : "border border-navy/15 text-navy/50 hover:bg-navy/5"
+                  locale === l ? "bg-indigo text-white shadow-sm" : "border border-navy/15 text-navy/50 hover:bg-navy/5"
                 }`}
               >
                 {LOCALE_LABEL[l]}
@@ -71,49 +98,75 @@ function LandingPage() {
             ))}
           </div>
           <Link
-            href="/login"
-            className="rounded-xl bg-indigo px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+            href={primaryHref}
+            className="rounded-xl bg-indigo px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo/30 transition hover:opacity-90"
           >
-            {t.landing.staffSignIn}
+            {primaryLabel}
           </Link>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pb-16 pt-10 text-center sm:pt-16">
-        <p className="mb-4 font-mono text-xs uppercase tracking-[0.3em] text-orange">{t.landing.tagline}</p>
-        <h1 className="mb-6 text-balance font-serif text-4xl leading-tight text-navy sm:text-5xl">{t.login.title}</h1>
-        <p className="mb-10 max-w-xl text-balance text-lg leading-relaxed text-navy/65">{t.landing.pitch}</p>
+      {/* Hero — layered gradient backdrop instead of flat ivory, three accent
+          colors meeting in one soft glow behind the headline. */}
+      <section className="relative overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.16]"
+          style={{
+            background:
+              "radial-gradient(50% 60% at 18% 12%, #4F46E5, transparent), radial-gradient(45% 55% at 85% 8%, #E76F2F, transparent), radial-gradient(55% 50% at 60% 55%, #6B8F71, transparent)",
+          }}
+        />
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center px-6 pb-16 pt-10 text-center sm:pt-16">
+          <p className="mb-4 rounded-full border border-orange/25 bg-orange/10 px-4 py-1.5 font-mono text-xs uppercase tracking-[0.3em] text-orange">
+            {t.landing.tagline}
+          </p>
+          <h1 className="mb-6 text-balance font-serif text-5xl leading-tight text-navy sm:text-6xl">{t.login.title}</h1>
+          <p className="mb-10 max-w-xl text-balance text-lg leading-relaxed text-navy/65">{t.landing.pitch}</p>
 
-        <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row">
-          <Link
-            href="/login"
-            className="w-full rounded-xl bg-indigo px-8 py-3.5 text-center font-semibold text-white transition hover:opacity-90 sm:w-auto"
-          >
-            {t.landing.staffSignIn}
-          </Link>
-          <TrackForm />
+          <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row">
+            <Link
+              href={primaryHref}
+              className="w-full rounded-xl bg-gradient-to-br from-indigo to-[#3730A3] px-8 py-3.5 text-center font-semibold text-white shadow-lg shadow-indigo/30 transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto"
+            >
+              {primaryLabel}
+            </Link>
+            <TrackForm />
+          </div>
         </div>
       </section>
 
-      {/* Stats strip */}
-      <section className="border-y border-navy/10 bg-surface">
-        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 px-6 py-8 sm:grid-cols-4">
+      {/* Stats strip — colored icon chips instead of plain centered text */}
+      <section className="border-y border-navy/10 bg-white">
+        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 px-6 py-10 sm:grid-cols-4">
           {STATS.map((key) => (
-            <div key={key} className="text-center">
+            <div key={key} className="flex flex-col items-center gap-2 text-center">
+              <span
+                className="flex h-11 w-11 items-center justify-center rounded-2xl text-xl shadow-sm"
+                style={{ backgroundColor: `${STAT_ACCENTS[key]}18` }}
+              >
+                {STAT_ICONS[key]}
+              </span>
               <p className="font-serif text-sm text-navy sm:text-base">{t.landing[key]}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it works — each card gets its own accent color and a bolder,
+          filled number badge instead of a uniform indigo-tinted circle. */}
       <section className="mx-auto max-w-4xl px-6 py-16 sm:px-10">
-        <h2 className="mb-10 text-center font-serif text-2xl text-navy sm:text-3xl">{t.landing.howItWorksTitle}</h2>
+        <h2 className="mb-10 text-center font-serif text-3xl text-navy sm:text-4xl">{t.landing.howItWorksTitle}</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {STEPS.map((step, i) => (
-            <div key={step} className="rounded-card border border-navy/10 bg-surface p-6 shadow-card">
-              <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-indigo/10 font-mono text-sm font-semibold text-indigo">
+            <div
+              key={step}
+              className="rounded-card border border-navy/10 bg-white p-6 shadow-card transition hover:-translate-y-1 hover:shadow-lg"
+              style={{ borderTop: `3px solid ${STEP_ACCENTS[i]}` }}
+            >
+              <span
+                className="mb-3 flex h-10 w-10 items-center justify-center rounded-full font-mono text-sm font-bold text-white shadow-sm"
+                style={{ backgroundColor: STEP_ACCENTS[i] }}
+              >
                 {i + 1}
               </span>
               <p className="mb-2 font-serif text-xl text-navy">{t.landing[`${step}Title` as "step1Title"]}</p>
@@ -128,29 +181,4 @@ function LandingPage() {
       </footer>
     </main>
   );
-}
-
-// Mirrors mobile's app/index.tsx: an authenticated staff member never sees
-// this page, they're routed straight to wherever their backend-verified
-// role sends them — same as before. The only real change is that an
-// unauthenticated visitor now sees an actual landing page instead of being
-// bounced straight to /login with a blank flash.
-export default function Home() {
-  const router = useRouter();
-  const hasHydrated = useAuthStore((s) => s.hasHydrated);
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const staff = useAuthStore((s) => s.staff);
-
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (accessToken && staff) {
-      router.replace(destinationForRole(staff.role));
-    }
-  }, [hasHydrated, accessToken, staff, router]);
-
-  if (!hasHydrated || (accessToken && staff)) {
-    return <main className="min-h-screen bg-ivory" />;
-  }
-
-  return <LandingPage />;
 }

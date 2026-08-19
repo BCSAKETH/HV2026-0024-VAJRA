@@ -327,6 +327,7 @@ const en = {
     tagline: "The Exact Point of Truth",
     pitch: "A state-aware 3PL logistics operating system for MSMEs — every package checked, physically and cryptographically, at every step of its journey.",
     staffSignIn: "Staff Sign In",
+    goToDashboard: "Go to Dashboard",
     trackPlaceholder: "Enter tracking ID or code",
     trackButton: "Track",
     statDefenses: "10 fraud & error defenses",
