@@ -314,6 +314,17 @@ export const api = {
       body: JSON.stringify({ reason: reason ?? null, staff_lat: lat ?? null, staff_lng: lng ?? null }),
     }),
 
+  // Direct-QR-scan reclaim for an RTO'd package — no bag involved, since it
+  // sits loose at the hub rather than sealed inside one. Lands it back in
+  // the same claimed pool a normal claim-child produces, so it shows up in
+  // getClaimed() and gets picked up by proceedToDeliver() same as any
+  // other package.
+  reclaimRto: (trackingId: string, lat?: number, lng?: number) =>
+    request<Shipment>(`/shipments/${trackingId}/reclaim-rto`, {
+      method: "POST",
+      body: JSON.stringify({ staff_lat: lat ?? null, staff_lng: lng ?? null }),
+    }),
+
   getMyNotifications: () => request<StaffNotification[]>("/notifications/mine"),
 
   ackNotification: (id: string) => request<StaffNotification>(`/notifications/${id}/ack`, { method: "POST" }),

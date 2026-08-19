@@ -54,22 +54,39 @@ export default function ClaimScreen() {
   }
 
   async function handleScanBag(rawCode: string) {
+    if (busy) return;
     setError(null);
-    setStep("unsealing");
+    setBusy(true);
     try {
       const resolved = await api.resolve(rawCode);
-      if (resolved.type !== "BAG") {
-        setError("That's a parcel code — scan a Master Bag QR instead.");
-        setStep("scan_bag");
+
+      if (resolved.type === "PARCEL") {
+        // Direct reclaim for a returned (RTO) package — no bag involved,
+        // it sits loose at the hub rather than sealed inside one. Any
+        // Last-Mile agent can scan its own tracking QR straight from this
+        // screen and it joins the same claimed pool a normal bag claim
+        // produces. If the scanned parcel genuinely isn't RTO, the backend
+        // says exactly why and that becomes the on-screen error below —
+        // same as any other invalid scan, just a real reason now instead
+        // of a generic "scan a bag instead".
+        const { lat, lng } = await getCurrentLocationSafe();
+        const shipment = await api.reclaimRto(resolved.id, lat, lng);
+        setClaimedCount((c) => c + 1);
+        triggerFlash("claimed");
+        setLog((l) => [{ key: `${Date.now()}`, trackingId: shipment.tracking_id, kind: "claimed", message: "RTO reclaimed — added to manifest" }, ...l]);
         return;
       }
+
+      setStep("unsealing");
       const { lat, lng } = await getCurrentLocationSafe();
       const unsealed = await api.unsealBag(resolved.id, lat, lng);
       setBag(unsealed);
       setStep("scan_children");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not unseal that bag.");
+      setError(e instanceof ApiError ? e.message : "Could not process that scan.");
       setStep("scan_bag");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -159,15 +176,16 @@ export default function ClaimScreen() {
               </Text>
               <Text className={`mt-1 text-xs leading-relaxed ${isDark ? "text-white/70" : "text-navy/70"}`}>
                 1. Unseal arrived Master Bag at hub & claim parcels to your manifest{"\n"}
-                2. Tap 'Proceed to Deliver' to lock TSP-optimized delivery route{"\n"}
-                3. Deliver to doorstep with OTP verification & geofence lock
+                2. Scan a returned (RTO) parcel's own QR to reclaim it directly — no bag needed{"\n"}
+                3. Tap 'Proceed to Deliver' to lock TSP-optimized delivery route{"\n"}
+                4. Deliver to doorstep with OTP verification & geofence lock
               </Text>
 
               <Pressable
                 onPress={() => setActiveTab("scanner")}
                 className="mt-5 items-center rounded-xl bg-indigo py-3.5"
               >
-                <Text className="font-semibold text-white">Unseal Master Bag & Claim Parcels</Text>
+                <Text className="font-semibold text-white">Claim Parcels / Reclaim RTO</Text>
               </Pressable>
 
               {claimedCount > 0 ? (
@@ -188,7 +206,7 @@ export default function ClaimScreen() {
           <View className="flex-1">
             {step === "scan_bag" ? (
               <View className="flex-1">
-                <QrScanner onScan={handleScanBag} hint={error ?? "Scan an arrived Master Bag to unseal"} />
+                <QrScanner onScan={handleScanBag} hint={error ?? "Scan a Master Bag to unseal, or a returned (RTO) parcel to reclaim it"} />
                 {proceedBar}
               </View>
             ) : step === "unsealing" ? (
