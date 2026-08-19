@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { destinationForRole } from "@/lib/roleRouting";
@@ -59,11 +59,52 @@ function TrackForm() {
   );
 }
 
+// Direct DOM style writes on refs, not React state — a per-pixel mousemove
+// driving a state update would re-render the whole tree every frame; this
+// costs nothing per move and stays smooth. No new dependency, no WebGL, no
+// asset to source — just three layers moving at three different speeds,
+// which is the entire trick behind a convincing depth/parallax illusion.
+function useParallaxHero() {
+  const heroRef = useRef<HTMLElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const headlineRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const hero = heroRef.current;
+    if (!hero) return;
+
+    function handleMove(e: MouseEvent) {
+      const rect = hero!.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      if (backdropRef.current) backdropRef.current.style.transform = `translate(${x * -34}px, ${y * -34}px)`;
+      if (boxRef.current) boxRef.current.style.transform = `translate(${x * 46}px, ${y * 46}px) rotate(${x * 14}deg)`;
+      if (headlineRef.current) headlineRef.current.style.transform = `translate(${x * 9}px, ${y * 9}px)`;
+    }
+    function handleLeave() {
+      if (backdropRef.current) backdropRef.current.style.transform = "";
+      if (boxRef.current) boxRef.current.style.transform = "";
+      if (headlineRef.current) headlineRef.current.style.transform = "";
+    }
+    hero.addEventListener("mousemove", handleMove);
+    hero.addEventListener("mouseleave", handleLeave);
+    return () => {
+      hero.removeEventListener("mousemove", handleMove);
+      hero.removeEventListener("mouseleave", handleLeave);
+    };
+  }, []);
+
+  return { heroRef, backdropRef, boxRef, headlineRef };
+}
+
 export default function Home() {
   const { t, locale, setLocale } = useTranslation();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const staff = useAuthStore((s) => s.staff);
+  const { heroRef, backdropRef, boxRef, headlineRef } = useParallaxHero();
 
   // `/` never auto-redirects away, in either direction — a stale session
   // sitting in a normal browser (from earlier testing, or just not having
@@ -107,20 +148,35 @@ export default function Home() {
       </header>
 
       {/* Hero — layered gradient backdrop instead of flat ivory, three accent
-          colors meeting in one soft glow behind the headline. */}
-      <section className="relative overflow-hidden">
+          colors meeting in one soft glow behind the headline. Mouse motion
+          drives three layers (backdrop, floating box, headline) at three
+          different speeds/directions for a real parallax-depth feel. */}
+      <section ref={heroRef} className="relative overflow-hidden">
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.16]"
+          ref={backdropRef}
+          className="pointer-events-none absolute inset-0 opacity-[0.16] transition-transform duration-300 ease-out"
           style={{
             background:
               "radial-gradient(50% 60% at 18% 12%, #4F46E5, transparent), radial-gradient(45% 55% at 85% 8%, #E76F2F, transparent), radial-gradient(55% 50% at 60% 55%, #6B8F71, transparent)",
           }}
         />
+        <div
+          ref={boxRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute right-[8%] top-16 hidden text-6xl drop-shadow-xl transition-transform duration-300 ease-out sm:block sm:right-[12%] sm:top-20"
+        >
+          📦
+        </div>
         <div className="relative mx-auto flex max-w-3xl flex-col items-center px-6 pb-16 pt-10 text-center sm:pt-16">
           <p className="mb-4 rounded-full border border-orange/25 bg-orange/10 px-4 py-1.5 font-mono text-xs uppercase tracking-[0.3em] text-orange">
             {t.landing.tagline}
           </p>
-          <h1 className="mb-6 text-balance font-serif text-5xl leading-tight text-navy sm:text-6xl">{t.login.title}</h1>
+          <h1
+            ref={headlineRef}
+            className="mb-6 text-balance font-serif text-5xl leading-tight text-navy transition-transform duration-300 ease-out sm:text-6xl"
+          >
+            {t.login.title}
+          </h1>
           <p className="mb-10 max-w-xl text-balance text-lg leading-relaxed text-navy/65">{t.landing.pitch}</p>
 
           <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row">
