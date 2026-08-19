@@ -16,16 +16,16 @@ export function SecurityInbox({ events, staffById }: { events: SecurityEvent[]; 
 
   if (events.length === 0) {
     return (
-      <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-        <p className="mb-1 font-serif text-xl text-navy">{t.securityInbox.title}</p>
+      <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #2F9E5B" }}>
+        <p className="mb-1 font-serif text-xl text-navy">🛡️ {t.securityInbox.title}</p>
         <p className="text-sage">{t.securityInbox.clean}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-card border border-navy/10 bg-white p-6 shadow-card">
-      <p className="mb-4 font-serif text-xl text-navy">{t.securityInbox.title}</p>
+    <div className="rounded-card border border-navy/8 bg-white p-6 shadow-card" style={{ borderTop: "3px solid #D6336C" }}>
+      <p className="mb-4 font-serif text-xl text-navy">🛡️ {t.securityInbox.title}</p>
       <div className="flex max-h-96 flex-col gap-3 overflow-y-auto">
         {events.map((event) => {
           const isCompromised = event.event_type === "COMPROMISED";

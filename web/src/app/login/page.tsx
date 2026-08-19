@@ -59,8 +59,19 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-ivory px-6">
-      <div className="mb-2 flex gap-1.5">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ivory px-6">
+      {/* Same gradient language as the landing hero, quieter here on
+          purpose — a bold backdrop is fine, a competing interactive scene
+          isn't: this page has exactly one job (get the OTP entered). */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.12]"
+        style={{
+          background:
+            "radial-gradient(45% 55% at 15% 15%, #4F46E5, transparent), radial-gradient(40% 50% at 88% 12%, #E76F2F, transparent), radial-gradient(50% 45% at 50% 90%, #6B8F71, transparent)",
+        }}
+      />
+
+      <div className="relative mb-2 flex gap-1.5">
         {LOCALES.map((l) => (
           <button
             key={l}
@@ -74,13 +85,13 @@ function LoginForm() {
         ))}
       </div>
 
-      <Image src="/logo.png" alt="LOCUS" width={56} height={56} className="mb-3 rounded-2xl" />
-      <h1 className="mb-1 font-serif text-4xl text-navy">{t.login.title}</h1>
-      <p className="mb-10 text-navy/60">{t.login.subtitle}</p>
+      <Image src="/logo.png" alt="LOCUS" width={56} height={56} className="relative mb-3 rounded-2xl shadow-lg shadow-indigo/20" />
+      <h1 className="relative mb-1 font-serif text-4xl text-navy">{t.login.title}</h1>
+      <p className="relative mb-10 text-navy/60">{t.login.subtitle}</p>
 
       <form
         onSubmit={step === "phone" ? requestOtp : verifyOtp}
-        className="w-full max-w-sm rounded-card border border-navy/10 bg-white p-6 shadow-card"
+        className="relative w-full max-w-sm rounded-card border border-navy/10 bg-white p-6 shadow-card"
       >
         {step === "phone" ? (
           <>
