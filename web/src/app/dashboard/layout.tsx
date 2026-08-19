@@ -51,7 +51,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             "radial-gradient(60% 50% at 8% 0%, #4F46E5, transparent), radial-gradient(50% 45% at 100% 20%, #E76F2F, transparent), radial-gradient(55% 60% at 50% 100%, #6B8F71, transparent)",
         }}
       />
-      <header className="relative z-10 flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
+      {/* z-20, deliberately higher than the z-10 content wrapper below.
+          The header and that content div are SIBLINGS, each its own
+          stacking context (both `position: relative`) — a z-index set
+          *inside* one context (ProfileMenu's dropdown at z-50) only ever
+          competes with other things inside that same context, never with
+          a whole separate sibling context. With both previously at z-10,
+          the content div (later in DOM order, same z-index) painted on
+          top of the entire header — including its open dropdown — which
+          is exactly the "can't click Log out, RoleSwitcher is on top of
+          the menu" bug confirmed from a real screenshot. Giving the
+          header's own context a higher z-index than its sibling's fixes
+          it at the root instead of chasing it inside ProfileMenu. */}
+      <header className="relative z-20 flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="LOCUS" width={36} height={36} className="rounded-xl" />
           <div>
