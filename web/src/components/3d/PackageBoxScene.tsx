@@ -127,11 +127,66 @@ function CourierFigure() {
         <boxGeometry args={[0.4, 0.36, 0.26]} />
         <meshStandardMaterial color="#172B3A" roughness={0.9} />
       </mesh>
-      {/* arm, raised slightly as if scanning/gesturing toward the box */}
-      <mesh position={[-0.3, 0.72, 0.05]} rotation={[0, 0, 0.5]} castShadow>
-        <boxGeometry args={[0.34, 0.13, 0.13]} />
+      {/* Arm, attached at the shoulder. Confirmed from a real screenshot:
+          the previous position (x=-0.3, well past the body's own 0.22
+          half-width) floated visibly detached from the body — at this
+          scale/angle it read as an unrelated dark diamond next to the
+          figure, not a limb. Pulled in to actually meet the body edge,
+          shortened, and rotated less aggressively so it stays a clearly-
+          attached small gesture rather than a separate floating shape. */}
+      <mesh position={[-0.24, 0.8, 0.06]} rotation={[0, 0, 0.35]} castShadow>
+        <boxGeometry args={[0.26, 0.11, 0.11]} />
         <meshStandardMaterial color="#6B8F71" roughness={0.9} />
       </mesh>
+    </group>
+  );
+}
+
+/** Procedural delivery truck — same rule as everything else in this scene:
+ * flat-shaded primitives, zero external assets. Cargo box + cab + 4 wheels,
+ * LOCUS's own orange (matches the brand's real "warehouse action" accent,
+ * not copied from any reference image's arbitrary color). Positioned in
+ * the background, well behind and smaller than the actual box, so it
+ * reads as scene detail — the box stays the one thing the eye lands on. */
+function DeliveryTruck() {
+  const GROUND_Y = -0.62; // sits directly on the same floor plane as ContactShadows
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    groupRef.current.position.y = GROUND_Y + Math.sin(clock.getElapsedTime() * 0.8 + 2) * 0.02;
+  });
+
+  const wheelPositions: [number, number, number][] = [
+    [-0.55, 0.16, 0.32],
+    [-0.55, 0.16, -0.32],
+    [0.35, 0.16, 0.32],
+    [0.35, 0.16, -0.32],
+  ];
+
+  return (
+    <group ref={groupRef} position={[-1.95, GROUND_Y, 0.1]} rotation={[0, 0.45, 0]} scale={0.42}>
+      {/* cargo box */}
+      <mesh position={[-0.15, 0.55, 0]} castShadow>
+        <boxGeometry args={[1.1, 0.72, 0.68]} />
+        <meshStandardMaterial color="#E76F2F" roughness={0.85} />
+      </mesh>
+      {/* cab */}
+      <mesh position={[0.62, 0.42, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.46, 0.62]} />
+        <meshStandardMaterial color="#E76F2F" roughness={0.85} />
+      </mesh>
+      {/* windshield */}
+      <mesh position={[0.84, 0.5, 0]} rotation={[0, 0, -0.35]}>
+        <boxGeometry args={[0.05, 0.28, 0.5]} />
+        <meshStandardMaterial color="#172B3A" roughness={0.6} />
+      </mesh>
+      {/* wheels */}
+      {wheelPositions.map((pos, i) => (
+        <mesh key={i} position={pos} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.16, 0.16, 0.1, 16]} />
+          <meshStandardMaterial color="#20262B" roughness={0.9} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -255,14 +310,23 @@ export function PackageBoxScene({
           camera={{ position: [2.6, 1.6, 3.2], fov: 38 }}
           gl={{ antialias: true, alpha: true }}
         >
-          <ambientLight intensity={0.65} />
-          <directionalLight position={[3, 4, 2]} intensity={0.9} castShadow />
-          <pointLight position={[-2.5, 1, -2]} intensity={12} color={accentColor} />
+          {/* The accent point light was intensity=12, inherited from the
+              orphaned branch this component was ported from, never tuned
+              against this actual running scene — exactly the risk this
+              file's own docs warned about. Confirmed from a real
+              screenshot: it was overpowering the box's PAPER material,
+              washing the intended warm cream color toward a cool gray.
+              Pulled way down so it reads as a subtle accent rim light
+              instead of the dominant light source. */}
+          <ambientLight intensity={0.75} />
+          <directionalLight position={[3, 4, 2]} intensity={1.05} castShadow />
+          <pointLight position={[-2.5, 1, -2]} intensity={2.2} color={accentColor} />
 
           <Float speed={reducedMotion ? 0 : 1.4} rotationIntensity={reducedMotion ? 0 : 0.15} floatIntensity={reducedMotion ? 0 : 0.5}>
             <BoxGroup variant={effectiveVariant} openProgress={reducedMotion ? 1 : openProgress} accentColor={accentColor} />
           </Float>
           <CourierFigure />
+          <DeliveryTruck />
           <FloatingPackages />
 
           <ContactShadows position={[0, -0.62, 0]} opacity={0.35} scale={4} blur={2.4} far={2} />

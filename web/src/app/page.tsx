@@ -44,6 +44,22 @@ const STAT_ACCENTS: Record<(typeof STATS)[number], string> = {
   statLedger: "#B84A3A",
 };
 
+// A fixed, hand-picked 8x8 fill pattern for the illustrative QR in the
+// "Scan to Verify" section — deterministic (not random) so it doesn't
+// shift between renders, same reasoning as qrTexture.ts's seeded noise for
+// the 3D box's own QR decal. The three corners are always drawn as solid
+// finder squares regardless of this array (see isFinder in the JSX).
+const QR_PATTERN: boolean[][] = [
+  [true, false, true, true, false, true, true, false],
+  [false, true, false, false, true, false, false, true],
+  [true, true, false, true, true, false, true, true],
+  [false, false, true, false, false, true, false, false],
+  [true, false, true, true, false, true, true, false],
+  [false, true, false, false, true, false, false, true],
+  [true, true, false, true, true, false, true, true],
+  [false, false, true, false, false, true, false, false],
+];
+
 function TrackForm() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -463,14 +479,59 @@ export default function Home() {
           not just a flat overlay. */}
       <section ref={wordmarkRef} className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ivory">
         <div className="relative flex items-center whitespace-nowrap font-serif text-[13vw] font-medium leading-none tracking-tight text-navy sm:text-[15vw]">
+          {/* The -ml-[0.5em] this used to have pulled "FIED" so far left it
+              covered the "I" from "VERI" at rest — confirmed from a real
+              screenshot, not a guess. Fixed with plain, equal spacing on
+              both sides of the box; the depth-passing effect (in front of
+              VERI, behind FIED) still comes from the animated box
+              *sweeping across* both words as it scrolls, via z-index —
+              it never depended on a resting overlap to work. */}
           <span className="relative z-0">{t.landing.wordmarkFirstHalf}</span>
           <div
             ref={wordmarkBoxRef}
-            className="relative z-10 mx-2 flex h-[0.55em] w-[0.55em] shrink-0 items-center justify-center rounded-2xl border-2 border-indigo/30 bg-white text-[3rem] shadow-xl shadow-indigo/20"
+            className="relative z-10 mx-4 flex h-[0.5em] w-[0.5em] shrink-0 items-center justify-center rounded-2xl border-2 border-indigo/30 bg-white text-[2.4rem] shadow-xl shadow-indigo/20"
           >
             📦
           </div>
-          <span className="relative z-20 -ml-[0.5em] text-indigo">{t.landing.wordmarkSecondHalf}</span>
+          <span className="relative z-20 text-indigo">{t.landing.wordmarkSecondHalf}</span>
+        </div>
+      </section>
+
+      {/* SCAN TO VERIFY — a stylized phone scanning a QR, then resolving to
+          a "Delivered & Verified" confirmation. Pure CSS/DOM (no canvas,
+          no 3D) — the QR pattern is a fixed grid of divs with three
+          corner "finder" squares, same visual grammar as a real QR
+          without needing one to actually be scannable (it's illustrative,
+          same principle as qrTexture.ts's canvas-drawn one on the box
+          itself). Scroll-triggered once via .fade-up plus a CSS keyframe
+          sweep on the scan line — no new GSAP wiring needed. */}
+      <section className="fade-up mx-auto max-w-md px-6 py-20 text-center sm:px-10">
+        <p className="mb-8 font-mono text-xs uppercase tracking-[0.3em] text-indigo/70">{t.landing.scanKicker}</p>
+        <div className="relative mx-auto mb-6 w-64 rounded-[2rem] border-4 border-navy/80 bg-white p-4 shadow-2xl">
+          <div className="relative overflow-hidden rounded-xl bg-navy/5 p-3">
+            <div className="grid grid-cols-8 gap-[3px]">
+              {QR_PATTERN.map((row, y) =>
+                row.map((filled, x) => {
+                  const isFinder = (x < 2 && y < 2) || (x > 5 && y < 2) || (x < 2 && y > 5);
+                  return (
+                    <div
+                      key={`${x}-${y}`}
+                      className={`aspect-square rounded-[1px] ${isFinder || filled ? "bg-navy" : "bg-transparent"}`}
+                    />
+                  );
+                })
+              )}
+            </div>
+            <div className="scan-line pointer-events-none absolute inset-x-0 h-0.5 bg-orange shadow-[0_0_8px_2px_rgba(231,111,47,0.6)]" />
+          </div>
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-navy/40">TRK-000482</p>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-2xl border border-sage/30 bg-sage/10 px-5 py-3">
+          <span className="text-lg">✅</span>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-sage">{t.landing.scanVerifiedHeading}</p>
+            <p className="text-xs text-navy/50">{t.landing.scanVerifiedSub}</p>
+          </div>
         </div>
       </section>
 
