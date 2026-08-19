@@ -148,12 +148,19 @@ function CourierFigure() {
  * not copied from any reference image's arbitrary color). Positioned in
  * the background, well behind and smaller than the actual box, so it
  * reads as scene detail — the box stays the one thing the eye lands on. */
+const TRUCK_BASE_ROTATION_Y = 0.45;
+
 function DeliveryTruck() {
   const GROUND_Y = -0.62; // sits directly on the same floor plane as ContactShadows
   const groupRef = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
-    groupRef.current.position.y = GROUND_Y + Math.sin(clock.getElapsedTime() * 0.8 + 2) * 0.02;
+    const t = clock.getElapsedTime();
+    groupRef.current.position.y = GROUND_Y + Math.sin(t * 0.8 + 2) * 0.02;
+    // A slow idle sway around its base orientation — enough to read as
+    // "alive" (subtly rocking, like a parked vehicle's suspension) without
+    // looking like it's actually driving anywhere.
+    groupRef.current.rotation.y = TRUCK_BASE_ROTATION_Y + Math.sin(t * 0.5) * 0.025;
   });
 
   const wheelPositions: [number, number, number][] = [
@@ -164,7 +171,7 @@ function DeliveryTruck() {
   ];
 
   return (
-    <group ref={groupRef} position={[-1.95, GROUND_Y, 0.1]} rotation={[0, 0.45, 0]} scale={0.42}>
+    <group ref={groupRef} position={[-1.95, GROUND_Y, 0.1]} rotation={[0, TRUCK_BASE_ROTATION_Y, 0]} scale={0.42}>
       {/* cargo box */}
       <mesh position={[-0.15, 0.55, 0]} castShadow>
         <boxGeometry args={[1.1, 0.72, 0.68]} />
