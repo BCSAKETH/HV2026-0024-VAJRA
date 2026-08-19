@@ -100,7 +100,7 @@ export default function AnalyticsPage() {
   return (
     <main className="p-8">
       <div className="mb-6">
-        <p className="font-serif text-3xl text-navy">{t.nav.analytics}</p>
+        <p className="font-serif text-3xl text-navy">📊 {t.nav.analytics}</p>
         {analytics?.scope_type === "HUB" ? (
           <p className="mt-1 inline-block rounded-full border border-orange/25 bg-orange/10 px-3 py-1 font-mono text-xs uppercase tracking-widest text-orange">
             {t.analytics.scopedTo} {analytics.scope_hub_name}

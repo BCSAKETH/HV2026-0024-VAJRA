@@ -136,6 +136,46 @@ function CourierFigure() {
   );
 }
 
+// Small floating package cluster — the recurring motif across every
+// reference sheet you sent (the van blueprint, the mobile asset sheet).
+// Same procedural/flat-shaded rule as the box and the courier: primitives
+// only, zero external assets. Each one is a tiny plain cube (no QR decal,
+// no edges lines) so they read as background detail, not competing focal
+// points with the real box.
+const MINI_BOX_LAYOUT: Array<{ pos: [number, number, number]; scale: number; rotY: number; speed: number }> = [
+  { pos: [-1.5, 0.55, -0.5], scale: 0.22, rotY: 0.4, speed: 1.3 },
+  { pos: [-1.15, -0.15, 0.55], scale: 0.16, rotY: -0.6, speed: 1.7 },
+  { pos: [1.5, 0.85, 0.2], scale: 0.19, rotY: 0.9, speed: 1.1 },
+  { pos: [0.15, 1.15, -0.9], scale: 0.14, rotY: -0.3, speed: 1.9 },
+];
+
+function MiniBox({ pos, scale, rotY, speed }: { pos: [number, number, number]; scale: number; rotY: number; speed: number }) {
+  const ref = useRef<THREE.Mesh>(null);
+  const phase = useMemo(() => Math.random() * Math.PI * 2, []);
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    ref.current.position.y = pos[1] + Math.sin(t * speed + phase) * 0.07;
+    ref.current.rotation.y = rotY + t * 0.15;
+  });
+  return (
+    <mesh ref={ref} position={pos} scale={scale} castShadow>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color="#DCB78C" roughness={0.9} />
+    </mesh>
+  );
+}
+
+function FloatingPackages() {
+  return (
+    <>
+      {MINI_BOX_LAYOUT.map((box, i) => (
+        <MiniBox key={i} {...box} />
+      ))}
+    </>
+  );
+}
+
 function useWebglSupport() {
   const [supported, setSupported] = useState<boolean | null>(null);
   useEffect(() => {
@@ -223,6 +263,7 @@ export function PackageBoxScene({
             <BoxGroup variant={effectiveVariant} openProgress={reducedMotion ? 1 : openProgress} accentColor={accentColor} />
           </Float>
           <CourierFigure />
+          <FloatingPackages />
 
           <ContactShadows position={[0, -0.62, 0]} opacity={0.35} scale={4} blur={2.4} far={2} />
         </Canvas>
