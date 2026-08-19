@@ -302,10 +302,10 @@ export const api = {
     return request<Manifest>(`/agent/manifest${params}`);
   },
 
-  deliverShipment: (trackingId: string, otp: string, lat?: number, lng?: number) =>
+  deliverShipment: (trackingId: string, otp: string, lat?: number, lng?: number, deliveryPhotoBase64?: string) =>
     request<Shipment>(`/shipments/${trackingId}/deliver`, {
       method: "POST",
-      body: JSON.stringify({ otp, staff_lat: lat ?? null, staff_lng: lng ?? null }),
+      body: JSON.stringify({ otp, staff_lat: lat ?? null, staff_lng: lng ?? null, delivery_photo_base64: deliveryPhotoBase64 ?? null }),
     }),
 
   rtoShipment: (trackingId: string, reason: string | undefined, lat?: number, lng?: number) =>

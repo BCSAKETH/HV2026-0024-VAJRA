@@ -49,6 +49,11 @@ class DeliverIn(BaseModel):
     otp: str = Field(..., min_length=4, max_length=4)
     staff_lat: float | None = None
     staff_lng: float | None = None
+    # Optional here (not required=...) so an older, not-yet-updated mobile
+    # build calling /deliver without this field never breaks — the mobile
+    # UI is what actually enforces "you must take the photo" by not
+    # enabling Mark Delivered until one's captured.
+    delivery_photo_base64: str | None = None
 
 
 class RtoIn(BaseModel):

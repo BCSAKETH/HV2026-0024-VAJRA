@@ -90,6 +90,7 @@ class ShipmentOut(BaseModel):
     assigned_staff_id: str | None
     created_at: str
     delivered_at: str | None = None
+    delivery_photo_url: str | None = None
 
 
 class ConditionPhotosOut(BaseModel):

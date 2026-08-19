@@ -1,8 +1,9 @@
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Pressable, Text, TextInput, View } from "react-native";
 
+import { PhotoCapture, type CapturedPhoto } from "../../../components/PhotoCapture";
 import { ApiError, api, type Shipment } from "../../../lib/api";
 import { haversineMeters } from "../../../lib/geo";
 
@@ -18,6 +19,8 @@ export default function DeliverScreen() {
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<CapturedPhoto | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
@@ -55,6 +58,18 @@ export default function DeliverScreen() {
     );
   }
 
+  if (showCamera) {
+    return (
+      <PhotoCapture
+        onCaptured={(p) => {
+          setPhoto(p);
+          setShowCamera(false);
+        }}
+        hint={`${shipment.tracking_id} — Photograph the delivered package`}
+      />
+    );
+  }
+
   // Defense 9: no address coordinates on file means no geofence to enforce —
   // the "Call Recipient" fallback is what covers that case, not a hard lock.
   const hasTarget = shipment.delivery_lat !== null && shipment.delivery_lng !== null;
@@ -64,7 +79,7 @@ export default function DeliverScreen() {
     setBusy(true);
     setError(null);
     try {
-      await api.deliverShipment(trackingId, otp, position?.lat, position?.lng);
+      await api.deliverShipment(trackingId, otp, position?.lat, position?.lng, photo?.base64);
       router.replace("/lastmile/manifest");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not confirm delivery.");
@@ -125,10 +140,26 @@ export default function DeliverScreen() {
         className={`mb-4 rounded-xl border px-4 py-3 text-center font-mono text-2xl tracking-widest ${withinGeofence ? "border-navy/15 bg-white text-navy" : "border-navy/10 bg-navy/5 text-navy/30"}`}
       />
 
+      <Text className="mb-1 text-sm font-medium text-navy">Proof of delivery</Text>
+      {photo ? (
+        <Pressable onPress={() => setShowCamera(true)} className="mb-4 flex-row items-center gap-3">
+          <Image source={{ uri: photo.uri }} className="h-16 w-16 rounded-xl border border-navy/15" />
+          <Text className="text-sm text-indigo">Retake photo</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          disabled={!withinGeofence}
+          onPress={() => setShowCamera(true)}
+          className="mb-4 items-center rounded-xl border border-dashed border-navy/25 py-3.5 disabled:opacity-40"
+        >
+          <Text className="font-semibold text-navy">Take Delivery Photo</Text>
+        </Pressable>
+      )}
+
       {error ? <Text className="mb-4 text-brick">{error}</Text> : null}
 
       <Pressable
-        disabled={!withinGeofence || otp.length !== 4 || busy}
+        disabled={!withinGeofence || otp.length !== 4 || !photo || busy}
         onPress={handleDeliver}
         className="mb-3 items-center rounded-xl bg-sage py-3.5 disabled:opacity-40"
       >
