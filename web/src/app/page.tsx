@@ -2,8 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+// R3F/Canvas touches WebGL/window at render time, not just in effects — a
+// plain import would try to render it during Next's server pass on this
+// "use client" page (client components still get an initial SSR/static
+// pass) and crash the build. ssr:false is what keeps it real-browser-only.
+const PackageBoxScene = dynamic(() => import("@/components/3d/PackageBoxScene").then((m) => m.PackageBoxScene), { ssr: false });
 
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { destinationForRole } from "@/lib/roleRouting";
@@ -160,33 +167,37 @@ export default function Home() {
               "radial-gradient(50% 60% at 18% 12%, #4F46E5, transparent), radial-gradient(45% 55% at 85% 8%, #E76F2F, transparent), radial-gradient(55% 50% at 60% 55%, #6B8F71, transparent)",
           }}
         />
-        <div
-          ref={boxRef}
-          aria-hidden="true"
-          className="pointer-events-none absolute right-[8%] top-16 hidden text-6xl drop-shadow-xl transition-transform duration-300 ease-out sm:block sm:right-[12%] sm:top-20"
-        >
-          📦
-        </div>
-        <div className="relative mx-auto flex max-w-3xl flex-col items-center px-6 pb-16 pt-10 text-center sm:pt-16">
-          <p className="mb-4 rounded-full border border-orange/25 bg-orange/10 px-4 py-1.5 font-mono text-xs uppercase tracking-[0.3em] text-orange">
-            {t.landing.tagline}
-          </p>
-          <h1
-            ref={headlineRef}
-            className="mb-6 text-balance font-serif text-5xl leading-tight text-navy transition-transform duration-300 ease-out sm:text-6xl"
-          >
-            {t.login.title}
-          </h1>
-          <p className="mb-10 max-w-xl text-balance text-lg leading-relaxed text-navy/65">{t.landing.pitch}</p>
-
-          <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row">
-            <Link
-              href={primaryHref}
-              className="w-full rounded-xl bg-gradient-to-br from-indigo to-[#3730A3] px-8 py-3.5 text-center font-semibold text-white shadow-lg shadow-indigo/30 transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto"
+        <div className="relative mx-auto grid max-w-6xl gap-10 px-6 pb-16 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:pt-16">
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <p className="mb-4 rounded-full border border-orange/25 bg-orange/10 px-4 py-1.5 font-mono text-xs uppercase tracking-[0.3em] text-orange">
+              {t.landing.tagline}
+            </p>
+            <h1
+              ref={headlineRef}
+              className="mb-6 text-balance font-serif text-5xl leading-tight text-navy transition-transform duration-300 ease-out sm:text-6xl"
             >
-              {primaryLabel}
-            </Link>
-            <TrackForm />
+              {t.login.title}
+            </h1>
+            <p className="mb-10 max-w-xl text-balance text-lg leading-relaxed text-navy/65">{t.landing.pitch}</p>
+
+            <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row">
+              <Link
+                href={primaryHref}
+                className="w-full rounded-xl bg-gradient-to-br from-indigo to-[#3730A3] px-8 py-3.5 text-center font-semibold text-white shadow-lg shadow-indigo/30 transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto"
+              >
+                {primaryLabel}
+              </Link>
+              <TrackForm />
+            </div>
+          </div>
+
+          {/* The signature scene: a real, procedural (zero external assets)
+              Three.js box, ambient-rotating. The parallax hook's boxRef
+              still applies a CSS-level tilt/shift on top of the canvas's
+              own internal rotation, so the container drifts with the
+              cursor while the box spins inside it — two depth cues at once. */}
+          <div ref={boxRef} className="mx-auto h-[280px] w-full max-w-md transition-transform duration-300 ease-out sm:h-[360px]">
+            <PackageBoxScene variant="idle" accentColor="#4F46E5" height="100%" />
           </div>
         </div>
       </section>
