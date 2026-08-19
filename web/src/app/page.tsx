@@ -1,10 +1,19 @@
 "use client";
 
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+// Registered once at module scope — same pattern LocusGridAnimation already
+// uses for MotionPathPlugin on the track page, already proven safe under
+// Next's render pass (registration itself never touches window/document;
+// only the ScrollTrigger.create() calls inside useEffect below do, and
+// those only ever run client-side).
+gsap.registerPlugin(ScrollTrigger);
 
 // R3F/Canvas touches WebGL/window at render time, not just in effects — a
 // plain import would try to render it during Next's server pass on this
@@ -210,6 +219,118 @@ function useInteractiveBox() {
   return { wrapRef, openProgress, variant };
 }
 
+// The "Reveal" and "Signature Moment" sections below are pinned,
+// scroll-scrubbed sequences (GSAP ScrollTrigger) — the technique the
+// reference brief calls for. `openProgress` here drives a *second*,
+// independent PackageBoxScene instance (not the interactive hero one
+// above), specifically so scroll-driven opening can never fight with the
+// hero box's own click-to-open state — two separate component instances,
+// zero shared state, zero chance of one clobbering the other.
+//
+// gsap.context(), scoped to the root section ref, is what makes cleanup
+// safe: ctx.revert() on unmount kills every tween AND every ScrollTrigger
+// (including its pin spacer) created inside it. Skipping this is the
+// single most common source of real ScrollTrigger bugs — an orphaned pin
+// surviving a route change or a dev-mode fast-refresh.
+function useCinematicScroll() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const revealRef = useRef<HTMLDivElement>(null);
+  const revealHeadlineRef = useRef<HTMLHeadingElement>(null);
+  const wordmarkRef = useRef<HTMLDivElement>(null);
+  const wordmarkBoxRef = useRef<HTMLDivElement>(null);
+  const [revealProgress, setRevealProgress] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setReducedMotion(reduced);
+    if (reduced) {
+      // "Fall back to clean static stills" — the box just sits fully open,
+      // headline fully visible, no pin/scrub at all.
+      setRevealProgress(1);
+      return;
+    }
+
+    let ctx: gsap.Context | undefined;
+    try {
+      ctx = gsap.context(() => {
+        if (revealRef.current) {
+          ScrollTrigger.create({
+            trigger: revealRef.current,
+            start: "top top",
+            end: "+=1100",
+            pin: true,
+            scrub: 1,
+            // `revealProgress` lives in the top-level Home() component (it
+            // has to — it's a prop the JSX below reads directly), which
+            // means every setRevealProgress call re-renders the *whole*
+            // page tree, not just this section — both box canvases, the
+            // wordmark, the stat cards, all of it. onUpdate fires on
+            // nearly every scroll frame even with scrub smoothing the
+            // visual motion, so left uncapped this reconciles the entire
+            // page ~60x/second during any scroll through this section.
+            // Rounding to 2 decimals and skipping the update when
+            // unchanged (React bails out on an Object.is-equal state
+            // value) cuts that to ~100 updates across the whole scroll
+            // range instead of every frame — visually identical at this
+            // granularity, meaningfully cheaper.
+            onUpdate: (self) => {
+              const rounded = Math.round(self.progress * 100) / 100;
+              setRevealProgress((prev) => (prev === rounded ? prev : rounded));
+            },
+          });
+          if (revealHeadlineRef.current) {
+            gsap.fromTo(
+              revealHeadlineRef.current,
+              { opacity: 0, y: 24 },
+              {
+                opacity: 1,
+                y: 0,
+                scrollTrigger: { trigger: revealRef.current, start: "top top", end: "+=1100", scrub: 1 },
+              }
+            );
+          }
+        }
+
+        if (wordmarkRef.current && wordmarkBoxRef.current) {
+          gsap.fromTo(
+            wordmarkBoxRef.current,
+            { xPercent: -160, opacity: 0 },
+            {
+              xPercent: 160,
+              opacity: 1,
+              ease: "none",
+              scrollTrigger: { trigger: wordmarkRef.current, start: "top top", end: "+=900", pin: true, scrub: 1 },
+            }
+          );
+        }
+
+        gsap.utils.toArray<HTMLElement>(".fade-up").forEach((el) => {
+          gsap.fromTo(
+            el,
+            { opacity: 0, y: 28 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              ease: "power2.out",
+              scrollTrigger: { trigger: el, start: "top 85%", toggleActions: "play none none reverse" },
+            }
+          );
+        });
+      }, rootRef);
+    } catch {
+      // Same guarantee as LocusGridAnimation: a synchronous GSAP throw
+      // must never leave the page in a half-animated, stuck state.
+      setRevealProgress(1);
+    }
+
+    return () => ctx?.revert();
+  }, []);
+
+  return { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, revealProgress, reducedMotion };
+}
+
 export default function Home() {
   const { t, locale, setLocale } = useTranslation();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
@@ -217,6 +338,7 @@ export default function Home() {
   const staff = useAuthStore((s) => s.staff);
   const { heroRef, backdropRef, boxRef, headlineRef } = useParallaxHero();
   const { wrapRef: boxWrapRef, openProgress, variant: boxVariant } = useInteractiveBox();
+  const { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, revealProgress } = useCinematicScroll();
 
   // `/` never auto-redirects away, in either direction — a stale session
   // sitting in a normal browser (from earlier testing, or just not having
@@ -230,8 +352,8 @@ export default function Home() {
   const primaryLabel = hasHydrated && isAuthed ? t.landing.goToDashboard : t.landing.staffSignIn;
 
   return (
-    <main className="min-h-screen bg-ivory">
-      <header className="flex items-center justify-between px-6 py-5 sm:px-10">
+    <main ref={rootRef} className="min-h-screen bg-ivory">
+      <header className="relative z-20 flex items-center justify-between bg-ivory px-6 py-5 sm:px-10">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="LOCUS" width={38} height={38} className="rounded-xl shadow-sm" />
           <span className="font-serif text-2xl text-navy">{t.login.title}</span>
@@ -313,18 +435,58 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats strip — colored icon chips instead of plain centered text */}
+      {/* THE REVEAL — pinned + scroll-scrubbed. A second, independent box
+          instance (never touches the hero box's interactive state) opens
+          as openProgress tracks scroll position through this section,
+          using PackageBoxScene's own existing "scroll" variant — exactly
+          what that prop was documented for. One restrained accent
+          (indigo) only, per the brief. */}
+      <section ref={revealRef} className="relative flex min-h-screen items-center overflow-hidden bg-ivory">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-6 lg:grid-cols-2">
+          <div className="order-2 mx-auto h-[300px] w-full max-w-md sm:h-[380px] lg:order-1">
+            <PackageBoxScene variant={revealProgress > 0.02 ? "scroll" : "idle"} openProgress={revealProgress} accentColor="#4F46E5" height="100%" />
+          </div>
+          <div className="order-1 text-center lg:order-2 lg:text-left">
+            <p className="mb-4 font-mono text-xs uppercase tracking-[0.35em] text-indigo/70">{t.landing.revealKicker}</p>
+            <h2 ref={revealHeadlineRef} className="text-balance font-serif text-4xl leading-tight text-navy sm:text-5xl">
+              {t.landing.revealHeadline}
+            </h2>
+          </div>
+        </div>
+      </section>
+
+      {/* SIGNATURE MOMENT — a second pinned section: a giant wordmark with
+          the box (a lightweight flat card here, not a 3rd WebGL canvas —
+          the depth-passing effect is a z-index trick either way, doesn't
+          need to be 3D to read) sliding across it, behind the first half
+          of the word and in front of the second — real layered depth,
+          not just a flat overlay. */}
+      <section ref={wordmarkRef} className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ivory">
+        <div className="relative flex items-center whitespace-nowrap font-serif text-[13vw] font-medium leading-none tracking-tight text-navy sm:text-[15vw]">
+          <span className="relative z-0">{t.landing.wordmarkFirstHalf}</span>
+          <div
+            ref={wordmarkBoxRef}
+            className="relative z-10 mx-2 flex h-[0.55em] w-[0.55em] shrink-0 items-center justify-center rounded-2xl border-2 border-indigo/30 bg-white text-[3rem] shadow-xl shadow-indigo/20"
+          >
+            📦
+          </div>
+          <span className="relative z-20 -ml-[0.5em] text-indigo">{t.landing.wordmarkSecondHalf}</span>
+        </div>
+      </section>
+
+      {/* SPEC SLABS — same stat data as before, restyled as bigger,
+          fade-triggered moments instead of static centered text. */}
       <section className="border-y border-navy/10 bg-white">
-        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 px-6 py-10 sm:grid-cols-4">
+        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 px-6 py-16 sm:grid-cols-4">
           {STATS.map((key) => (
-            <div key={key} className="flex flex-col items-center gap-2 text-center">
+            <div key={key} className="fade-up flex flex-col items-center gap-3 text-center">
               <span
-                className="flex h-11 w-11 items-center justify-center rounded-2xl text-xl shadow-sm"
+                className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-sm"
                 style={{ backgroundColor: `${STAT_ACCENTS[key]}18` }}
               >
                 {STAT_ICONS[key]}
               </span>
-              <p className="font-serif text-sm text-navy sm:text-base">{t.landing[key]}</p>
+              <p className="font-serif text-base text-navy sm:text-lg">{t.landing[key]}</p>
             </div>
           ))}
         </div>
@@ -338,7 +500,7 @@ export default function Home() {
           {STEPS.map((step, i) => (
             <div
               key={step}
-              className="rounded-card border border-navy/10 bg-white p-6 shadow-card transition hover:-translate-y-1 hover:shadow-lg"
+              className="fade-up rounded-card border border-navy/10 bg-white p-6 shadow-card transition hover:-translate-y-1 hover:shadow-lg"
               style={{ borderTop: `3px solid ${STEP_ACCENTS[i]}` }}
             >
               <span
@@ -352,6 +514,17 @@ export default function Home() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Closing CTA — full-bleed, restrained (indigo only), one line. */}
+      <section className="fade-up bg-navy px-6 py-20 text-center sm:px-10">
+        <p className="mx-auto mb-6 max-w-xl text-balance font-serif text-3xl leading-tight text-ivory sm:text-4xl">{t.landing.ctaHeading}</p>
+        <Link
+          href={primaryHref}
+          className="inline-block rounded-xl bg-indigo px-8 py-3.5 font-semibold text-white shadow-lg shadow-indigo/40 transition hover:-translate-y-0.5 hover:opacity-90"
+        >
+          {primaryLabel}
+        </Link>
       </section>
 
       <footer className="border-t border-navy/10 px-6 py-8 text-center sm:px-10">
