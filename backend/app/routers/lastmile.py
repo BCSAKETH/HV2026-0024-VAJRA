@@ -1,3 +1,4 @@
+import base64
 import secrets
 from datetime import datetime, timezone
 from typing import Annotated
@@ -9,6 +10,7 @@ from app.core.config import get_settings
 from app.core.osrm import get_route
 from app.core.routing import group_multidrop, nearest_neighbor_route
 from app.core.security import require_roles
+from app.core.storage import upload_condition_photo
 from app.core.supabase_client import fetch_one, get_admin_client
 from app.core.fast2sms import send_out_for_delivery
 from app.core.velocity import haversine_km
@@ -236,9 +238,23 @@ def deliver_shipment(tracking_id: str, payload: DeliverIn, staff: Annotated[dict
     if payload.otp != shipment.get("delivery_otp"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect delivery OTP.")
 
+    update: dict = {"status": "DELIVERED", "delivered_at": datetime.now(timezone.utc).isoformat()}
+    if payload.delivery_photo_base64:
+        raw_b64 = payload.delivery_photo_base64
+        if "," in raw_b64:
+            raw_b64 = raw_b64.split(",", 1)[1]
+        try:
+            content = base64.b64decode(raw_b64)
+            update["delivery_photo_url"] = upload_condition_photo(tracking_id, content, "image/jpeg")
+        except Exception:
+            # Proof-of-delivery is a nice-to-have on top of OTP+geofence, not
+            # a third gate — a corrupt/undecodable photo must never block a
+            # delivery that's already passed both real defenses.
+            pass
+
     updated = (
         admin.table("shipments")
-        .update({"status": "DELIVERED", "delivered_at": datetime.now(timezone.utc).isoformat()})
+        .update(update)
         .eq("tracking_id", tracking_id)
         .execute()
         .data[0]
