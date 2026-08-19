@@ -84,6 +84,7 @@ export default function OverviewPage() {
 
   return (
     <main className="p-8">
+      <p className="mb-6 font-serif text-3xl text-navy">🗺️ {t.nav.overview}</p>
       <div className="mb-6">
         <KpiCards kpis={kpis} />
       </div>

@@ -87,7 +87,7 @@ function LoginForm() {
 
       <Image src="/logo.png" alt="LOCUS" width={56} height={56} className="relative mb-3 rounded-2xl shadow-lg shadow-indigo/20" />
       <h1 className="relative mb-1 font-serif text-4xl text-navy">{t.login.title}</h1>
-      <p className="relative mb-10 text-navy/60">{t.login.subtitle}</p>
+      <p className="relative mb-10 text-navy/60">🚚 {t.login.subtitle}</p>
 
       <form
         onSubmit={step === "phone" ? requestOtp : verifyOtp}
