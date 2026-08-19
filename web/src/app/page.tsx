@@ -106,12 +106,117 @@ function useParallaxHero() {
   return { heroRef, backdropRef, boxRef, headlineRef };
 }
 
+// Click-to-open uses PackageBoxScene's own existing, already-shipped
+// `openProgress` prop (drives the lid + glow dot smoothly by value — no
+// new logic inside the Three.js scene itself). Hover-tilt and drag-rotate
+// are a separate CSS-level layer on the *container* div wrapping the
+// canvas — the same technique already proven on the parallax hero and in
+// the earlier CSS box preview, just scoped to this one element instead of
+// the whole hero. Tilting the container doesn't reorient the actual 3D
+// geometry, but it reads as a real "the box responds to your cursor"
+// interaction without writing a single line of new, unverified
+// raycasting/orbit code inside the WebGL scene.
+function useInteractiveBox() {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [openProgress, setOpenProgress] = useState(0);
+  const [boxOpen, setBoxOpen] = useState(false);
+  const animRef = useRef<number | null>(null);
+  const draggingFrom = useRef<{ x: number; y: number } | null>(null);
+  const dragged = useRef(false);
+  const dragBase = useRef({ x: 0, y: 0 });
+  const tilt = useRef({ x: 0, y: 0 });
+
+  function applyTilt() {
+    if (wrapRef.current) wrapRef.current.style.transform = `perspective(900px) rotateX(${tilt.current.x}deg) rotateY(${tilt.current.y}deg)`;
+  }
+
+  function animateOpenTo(target: number) {
+    if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+    const step = () => {
+      setOpenProgress((prev) => {
+        const next = prev + (target - prev) * 0.15;
+        if (Math.abs(target - next) < 0.01) {
+          animRef.current = null;
+          return target;
+        }
+        animRef.current = requestAnimationFrame(step);
+        return next;
+      });
+    };
+    animRef.current = requestAnimationFrame(step);
+  }
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    function handleMove(e: PointerEvent) {
+      if (draggingFrom.current) {
+        const dx = e.clientX - draggingFrom.current.x;
+        const dy = e.clientY - draggingFrom.current.y;
+        if (!dragged.current && Math.abs(dx) + Math.abs(dy) > 4) dragged.current = true;
+        if (dragged.current) {
+          tilt.current = { x: Math.max(-25, Math.min(25, dragBase.current.x - dy * 0.3)), y: dragBase.current.y + dx * 0.3 };
+          applyTilt();
+        }
+        return;
+      }
+      const rect = el!.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      tilt.current = { x: -y * 14, y: x * 16 };
+      applyTilt();
+    }
+    function handleLeave() {
+      if (draggingFrom.current) return;
+      tilt.current = { x: 0, y: 0 };
+      applyTilt();
+    }
+    function handleDown(e: PointerEvent) {
+      draggingFrom.current = { x: e.clientX, y: e.clientY };
+      dragged.current = false;
+      dragBase.current = { ...tilt.current };
+      el!.setPointerCapture(e.pointerId);
+    }
+    function handleUp() {
+      const wasDrag = dragged.current;
+      draggingFrom.current = null;
+      // Toggling here is a pure state flip — the animation itself is
+      // driven by the effect below, watching `boxOpen`. Calling
+      // animateOpenTo() directly from inside this setState updater used
+      // to work in practice, but it's a real anti-pattern (a side effect
+      // inside a state-updater function) that React 18 strict mode
+      // deliberately double-invokes in dev specifically to catch.
+      if (!wasDrag) setBoxOpen((prev) => !prev);
+    }
+    el.addEventListener("pointermove", handleMove);
+    el.addEventListener("pointerleave", handleLeave);
+    el.addEventListener("pointerdown", handleDown);
+    el.addEventListener("pointerup", handleUp);
+    return () => {
+      el.removeEventListener("pointermove", handleMove);
+      el.removeEventListener("pointerleave", handleLeave);
+      el.removeEventListener("pointerdown", handleDown);
+      el.removeEventListener("pointerup", handleUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    animateOpenTo(boxOpen ? 1 : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boxOpen]);
+
+  const variant: "idle" | "scroll" = boxOpen || openProgress > 0.01 ? "scroll" : "idle";
+  return { wrapRef, openProgress, variant };
+}
+
 export default function Home() {
   const { t, locale, setLocale } = useTranslation();
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const staff = useAuthStore((s) => s.staff);
   const { heroRef, backdropRef, boxRef, headlineRef } = useParallaxHero();
+  const { wrapRef: boxWrapRef, openProgress, variant: boxVariant } = useInteractiveBox();
 
   // `/` never auto-redirects away, in either direction — a stale session
   // sitting in a normal browser (from earlier testing, or just not having
@@ -192,12 +297,18 @@ export default function Home() {
           </div>
 
           {/* The signature scene: a real, procedural (zero external assets)
-              Three.js box, ambient-rotating. The parallax hook's boxRef
-              still applies a CSS-level tilt/shift on top of the canvas's
-              own internal rotation, so the container drifts with the
-              cursor while the box spins inside it — two depth cues at once. */}
+              Three.js box. Two independent transform layers, composed by
+              nesting: the outer div (boxRef) drifts with the wide hero
+              parallax; the inner div (boxWrapRef) tilts/drags on its own
+              hover/pointer input and click-toggles open via openProgress. */}
           <div ref={boxRef} className="mx-auto h-[280px] w-full max-w-md transition-transform duration-300 ease-out sm:h-[360px]">
-            <PackageBoxScene variant="idle" accentColor="#4F46E5" height="100%" />
+            <div
+              ref={boxWrapRef}
+              className="h-full w-full cursor-grab touch-none select-none transition-transform duration-150 ease-out active:cursor-grabbing"
+            >
+              <PackageBoxScene variant={boxVariant} openProgress={openProgress} accentColor="#4F46E5" height="100%" />
+            </div>
+            <p className="mt-2 text-center font-mono text-[11px] uppercase tracking-widest text-navy/30">{t.landing.boxHint}</p>
           </div>
         </div>
       </section>
