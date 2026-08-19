@@ -96,8 +96,21 @@ export default function PrinterPage() {
   const isQrPaster = staff?.role === "QR_PASTER";
 
   return (
-    <main className="min-h-screen bg-ivory">
-      <header className="no-print flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
+    <main className="relative min-h-screen overflow-x-hidden bg-ivory">
+      {/* Same ambient fill as the dashboard layout — this page lives
+          outside that layout (QR Paster has no dashboard tab bar at all),
+          so without this its narrow centered card left the wide side
+          gutters and any leftover space below it looking completely
+          empty. */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.07]"
+        aria-hidden="true"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 8% 0%, #4F46E5, transparent), radial-gradient(50% 45% at 100% 20%, #E76F2F, transparent), radial-gradient(55% 60% at 50% 100%, #6B8F71, transparent)",
+        }}
+      />
+      <header className="no-print relative z-10 flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="LOCUS" width={32} height={32} className="rounded-lg" />
           <div>
@@ -110,6 +123,7 @@ export default function PrinterPage() {
         <ProfileMenu />
       </header>
 
+      <div className="relative z-10">
       {isQrPaster ? (
         <div className="no-print mx-auto flex max-w-md gap-2 px-8 pt-6">
           <button
@@ -232,6 +246,7 @@ export default function PrinterPage() {
           )}
         </section>
       )}
+      </div>
     </main>
   );
 }
