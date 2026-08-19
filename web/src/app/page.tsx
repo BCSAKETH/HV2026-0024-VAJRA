@@ -60,6 +60,32 @@ const QR_PATTERN: boolean[][] = [
   [false, false, true, false, false, true, false, false],
 ];
 
+// Self-contained on purpose: its own scroll listener and its own state,
+// so the frequent scroll-position checks needed to fade it out never
+// touch Home()'s render tree. Cheap (a single threshold check, not
+// per-pixel math), and only active for the first ~120px of scroll.
+function ScrollCue() {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    function handleScroll() {
+      setVisible(window.scrollY < 120);
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <div
+      className={`pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1 transition-opacity duration-300 lg:flex ${
+        visible ? "opacity-40" : "opacity-0"
+      }`}
+      aria-hidden="true"
+    >
+      <span className="scroll-cue-bounce text-navy/60">↓</span>
+    </div>
+  );
+}
+
 function TrackForm() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -254,6 +280,7 @@ function useCinematicScroll() {
   const revealHeadlineRef = useRef<HTMLHeadingElement>(null);
   const wordmarkRef = useRef<HTMLDivElement>(null);
   const wordmarkBoxRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const [revealProgress, setRevealProgress] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -270,6 +297,23 @@ function useCinematicScroll() {
     let ctx: gsap.Context | undefined;
     try {
       ctx = gsap.context(() => {
+        // Whole-page scroll progress — direct DOM style write on a ref,
+        // not React state, on purpose: this fires on literally every
+        // scroll frame for the entire page height, so it must never touch
+        // React's render cycle at all (unlike revealProgress above, which
+        // at least only needed *rounding* to stay cheap — this one can't
+        // go through setState even rounded, it needs to be zero-cost).
+        if (progressBarRef.current) {
+          ScrollTrigger.create({
+            trigger: document.body,
+            start: "top top",
+            end: "bottom bottom",
+            onUpdate: (self) => {
+              if (progressBarRef.current) progressBarRef.current.style.transform = `scaleX(${self.progress})`;
+            },
+          });
+        }
+
         if (revealRef.current) {
           ScrollTrigger.create({
             trigger: revealRef.current,
@@ -344,7 +388,7 @@ function useCinematicScroll() {
     return () => ctx?.revert();
   }, []);
 
-  return { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, revealProgress, reducedMotion };
+  return { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, progressBarRef, revealProgress, reducedMotion };
 }
 
 export default function Home() {
@@ -354,7 +398,7 @@ export default function Home() {
   const staff = useAuthStore((s) => s.staff);
   const { heroRef, backdropRef, boxRef, headlineRef } = useParallaxHero();
   const { wrapRef: boxWrapRef, openProgress, variant: boxVariant } = useInteractiveBox();
-  const { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, revealProgress } = useCinematicScroll();
+  const { rootRef, revealRef, revealHeadlineRef, wordmarkRef, wordmarkBoxRef, progressBarRef, revealProgress } = useCinematicScroll();
 
   // `/` never auto-redirects away, in either direction — a stale session
   // sitting in a normal browser (from earlier testing, or just not having
@@ -369,6 +413,15 @@ export default function Home() {
 
   return (
     <main ref={rootRef} className="min-h-screen bg-ivory">
+      {/* Whole-page scroll progress, fixed above everything including the
+          pinned sections (z-30 > header's z-20 > pinned content's default
+          stacking). Starts collapsed (scaleX(0)); the ScrollTrigger in
+          useCinematicScroll drives it directly via ref, never React state. */}
+      <div
+        ref={progressBarRef}
+        className="fixed left-0 right-0 top-0 z-30 h-[3px] origin-left scale-x-0 bg-indigo"
+        aria-hidden="true"
+      />
       <header className="relative z-20 flex items-center justify-between bg-ivory px-6 py-5 sm:px-10">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="LOCUS" width={38} height={38} className="rounded-xl shadow-sm" />
@@ -449,6 +502,7 @@ export default function Home() {
             <p className="mt-2 text-center font-mono text-[11px] uppercase tracking-widest text-navy/30">{t.landing.boxHint}</p>
           </div>
         </div>
+        <ScrollCue />
       </section>
 
       {/* THE REVEAL — pinned + scroll-scrubbed. A second, independent box

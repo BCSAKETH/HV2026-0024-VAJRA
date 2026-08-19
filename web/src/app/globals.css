@@ -46,6 +46,23 @@
   }
 }
 
+/* Cold-open scroll cue — a gently bouncing arrow, fades out once the
+   visitor actually starts scrolling (handled in ScrollCue's own effect). */
+@keyframes scroll-cue-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+.scroll-cue-bounce {
+  display: inline-block;
+  font-size: 1.25rem;
+  animation: scroll-cue-bounce 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue-bounce {
+    animation: none;
+  }
+}
+
 /* Printed QR label (Printer page) — a fixed-size shipping label, not the
    page. Hidden on screen; shown, and made the only visible content, only
    inside @media print. Standard 4x6in label size via @page so it doesn't
