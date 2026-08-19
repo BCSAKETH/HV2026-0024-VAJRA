@@ -110,7 +110,13 @@ export default function PrinterPage() {
             "radial-gradient(60% 50% at 8% 0%, #4F46E5, transparent), radial-gradient(50% 45% at 100% 20%, #E76F2F, transparent), radial-gradient(55% 60% at 50% 100%, #6B8F71, transparent)",
         }}
       />
-      <header className="no-print relative z-10 flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
+      {/* z-20, higher than the z-10 content wrapper below it — same fix
+          as the dashboard layout: the header and the content div are
+          sibling stacking contexts, so ProfileMenu's z-50 dropdown only
+          outranks things *inside* header's own context, never a whole
+          separate sibling. Equal z-index + later DOM order was letting
+          the page content paint over the open menu. */}
+      <header className="no-print relative z-20 flex items-center justify-between border-b border-navy/10 bg-white px-8 py-4">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="LOCUS" width={32} height={32} className="rounded-lg" />
           <div>
